@@ -12,6 +12,20 @@ from io import StringIO
 from flask import Response, make_response
 
 
+from flask import send_from_directory
+
+# --- PWA Routes ---
+@app.route('/manifest.json')
+def serve_manifest():
+    return send_from_directory('static', 'manifest.json')
+
+@app.route('/sw.js')
+def serve_sw():
+    response = send_from_directory('static', 'sw.js')
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return response
+
+
 # 1. SABSE PEHLE .env file load karni hai
 load_dotenv()
 
