@@ -13,56 +13,44 @@ A modern, full-stack, AI-powered School Management System designed specifically 
 
 ---
 
-## Key Features
+## Technical Architecture & System Overview
 
-*   **Secure Admin Portal:** Multi-tenant architecture with encrypted passwords (`pbkdf2:sha256`) and strict session management isolated by `school_code`.
-*   **Master Student Directory:** Complete CRUD operations for student admission, demographics, and record management.
-*   **Visual Analytics & Dashboards:** Interactive charts (via Chart.js) tracking school strength, gender ratios, and overall attendance trends.
-*   **Advanced Exam Results:** Dynamic result calculation including total marks, percentage, and automated grading systems.
-*   **Govt Schemes Tracker:** Track the distribution of government-provided materials (Uniforms, Books, Shoes, Bags) for each student.
-*   **Student Promotion Module:** Bulk promote students to the next academic session effortlessly.
-*   **Smart AI Assistant (Voice & Text):** Integrated with Google Gemini API and Web Speech API. Administrators can ask questions in Hindi or English (e.g., "Class 5 ke bacche dikhao"), and the AI securely translates it into read-only SQL queries to fetch real-time data.
+The application follows a monolithic client-server architecture with a decoupled AI service layer, engineered to digitize administrative and academic operations.
+
+### 1. System Architecture
+*   **Presentation Layer (Frontend):** Developed using HTML5, Tailwind CSS, and Alpine.js. The interface employs a custom "Blackboard & Register" theme, utilizing CSS radial gradients and SVG displacement filters to simulate physical classroom elements without relying on heavy background images. State management for toggles, voice-recognition states, and bulk-selection (e.g., the Student Promotion module) is handled client-side via Alpine.js.
+*   **Application Layer (Backend):** Powered by Python and Flask. The backend handles HTTP routing, server-side business logic (e.g., dynamic grade calculations, percentage formatting), session management, and cryptographic functions using Werkzeug Security.
+*   **Data Layer (Database):** Hosted on Supabase (PostgreSQL). It acts as the single source of truth, heavily relying on relational constraints (Foreign Keys) to link all modules back to a central student directory.
+
+### 2. Multi-Tenant Security & Data Isolation
+Security is enforced at the application layer to ensure absolute data isolation across different registered schools:
+*   **Session-Based Tenant Isolation:** Upon successful administrative authentication, the `school_id` is stored in a secure, encrypted server-side session. Every subsequent backend SQL query automatically injects this `school_id` as a strict `WHERE` clause filter, ensuring School A can never query or view School B's data.
+*   **Strict Type Casting:** To prevent PostgreSQL type-mismatch errors between application strings and database integers, tenant filtering utilizes explicit casting (`CAST(school_id AS VARCHAR)`).
+*   **Cryptographic Hashing:** Passwords are never stored or transmitted in plaintext. The system utilizes PBKDF2 with SHA-256 hashing to secure administrative credentials.
+
+### 3. The AI & Voice Search Subsystem
+The portal features a "Smart AI Query" module, allowing administrators to query the PostgreSQL database using spoken Hindi, English, or Hinglish.
+*   **Speech-to-Text Pipeline:** Utilizes the browser-native Web Speech API configured with the `hi-IN` language model. This enables real-time transcription of regional queries directly into text strings without requiring external audio processing servers.
+*   **Context-Aware Prompt Engineering:** The transcribed text is sent to the Flask backend, where it is packaged into a strict prompt. This prompt injects the exact database schema (tables, columns, relationships) and the active `school_id` to provide the AI with total context.
+*   **Text-to-SQL Generation:** The Google Gemini API processes the prompt and translates the natural language request into a raw PostgreSQL query.
+*   **Execution Guardrails:** The system prompt explicitly restricts the AI to generate `SELECT` statements only. `INSERT`, `UPDATE`, `DELETE`, or `DROP` commands are structurally blocked to prevent accidental or malicious data corruption. 
+
+### 4. Core Functional Modules
+*   **Master Student Directory:** A central repository handling student admissions, demographics, and unique roll number assignments.
+*   **Academic Performance Engine:** Records subject-wise marks against dynamic `max_marks` parameters. The Python backend automatically computes total scores, calculates percentages, and assigns academic grades before committing the record to the database.
+*   **Monthly Attendance & Analytics:** Tracks total working days versus present days per student per month. This data is aggregated by SQL and visualized on the administrative dashboard using Chart.js.
+*   **Material Distribution Tracker:** A specialized administrative module to monitor the disbursement of government-provided schemes (uniforms, textbooks, shoes, and bags) using boolean tracking.
+*   **Bulk Student Promotion:** Allows administrators to filter students by their current class, select multiple records simultaneously, and execute a bulk database update to promote them to the next academic tier.
 
 ---
 
 ## Tech Stack
-
-**Frontend:**
-*   HTML5 & CSS3
-*   Tailwind CSS (Custom Blackboard & Glassmorphism Design)
-*   Alpine.js (Lightweight reactive UI components)
-*   Chart.js (Data visualization)
-
-**Backend:**
-*   Python
-*   Flask (Web Framework)
-*   Werkzeug Security (Password Hashing)
-*   Psycopg2 (PostgreSQL adapter)
-
-**Database & AI:**
-*   Supabase (PostgreSQL Database Hosting)
-*   Google Gemini API (Text-to-SQL logic)
+*   **Frontend:** HTML5, CSS3, Tailwind CSS, Alpine.js, Chart.js
+*   **Backend:** Python, Flask, Werkzeug Security, Psycopg2
+*   **Database:** PostgreSQL (Supabase)
+*   **AI Integration:** Google Gemini API, Web Speech API
 
 ---
 
-## Database Architecture
-
-The system utilizes a secure PostgreSQL relational database with the following core tables:
-1.  `schools` - Admin authentication and school details.
-2.  `students` - Master record, linked via foreign keys to all other tables.
-3.  `exam_results` - Academic performance tracking.
-4.  `monthly_attendance` - Monthly present/working days records.
-5.  `material_distribution` - Government schemes tracking.
-
-*(Strict data isolation is enforced using `CAST(school_id AS VARCHAR)` across all backend queries to prevent cross-school data leaks).*
-
----
-
-## Local Installation & Setup
-
-Follow these steps to run the project on your local machine.
-
-### 1. Clone the repository
-```bash
-git clone [https://github.com/your-username/govt-school-portal.git](https://github.com/your-username/govt-school-portal.git)
-cd govt-school-portal
+## Application Security Note
+*   **AI Prompt Injection Prevention:** The Gemini AI prompt is hardcoded at the backend level to strictly allow `SELECT` statements only. The backend execution engine acts as a secondary firewall to ensure no destructive operations can be processed, keeping the database fully secure.
