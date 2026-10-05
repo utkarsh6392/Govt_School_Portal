@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+{% set active_page = 'results' %}
+{% block page_title %}Exam Results & Report Card{% endblock %}
+
+{% block content %}
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap');
+
+    /* ---------- Theme tokens ---------- */
+    :root {
+        --tx: #e8eaf2; --tx-soft: #9aa3bd; --line: rgba(255,255,255,.14);
+        --surface: rgba(255,255,255,.04); --hover: rgba(255,255,255,.06);
+        --accent: #8FA8E8; --margin: rgba(224,122,122,.75); --rule: rgba(255,255,255,.08);
+        --shadow: none;
+    }
+    html[data-dash-mode="light"] {
+        --tx: #1c2233; --tx-soft: #5a6280; --line: rgba(40,55,100,.18);
+        --surface: #ffffff; --hover: rgba(47,75,138,.07);
+        --accent: #2F4B8A; --margin: rgba(192,57,43,.6); --rule: rgba(47,75,138,.13);
+        --shadow: 0 1px 2px rgba(30,40,90,.08);
+    }
+    .tx { color: var(--tx); } .soft { color: var(--tx-soft); }
+    .hand { font-family: 'Kalam', cursive; }
+    .rough { filter: url(#rough); }
+
+    /* ---------- Blackboard (Filter Bar) ---------- */
+    .board {
+        position: relative; color: #F1EEDF; font-family: 'Kalam', cursive;
+        background: radial-gradient(ellipse at 18% 12%, rgba(255,255,255,.08), transparent 55%), radial-gradient(ellipse at 85% 92%, rgba(255,255,255,.05), transparent 50%), #2A4A3E;
+        border: 10px solid #8A6A45; border-radius: 4px;
+        box-shadow: inset 0 0 0 2px rgba(0,0,0,.3), inset 0 0 50px rgba(0,0,0,.4), 0 2px 0 #6e5233;
+        padding: 20px 24px; margin-bottom: 24px;
+    }
+    .board .lab { font-size: 16px; opacity: .9; letter-spacing: 0.5px; margin-right: 8px; }
+    .board select {
+        background: rgba(0,0,0,0.25); border: 2px dashed rgba(241,238,223,.4); color: #F1EEDF;
+        font-family: inherit; font-size: 16px; padding: 4px 12px; border-radius: 6px; outline: none; cursor: pointer; transition: border 0.2s; width: 100%; max-width: 200px;
+    }
+    .board select:focus { border-color: #F2D675; }
+    .board select option { background: #2A4A3E; color: #F1EEDF; font-family: 'Inter', sans-serif; }
+    .tray { position: absolute; bottom: -10px; left: 0; right: 0; height: 10px; margin: 0 6px; background: #7A5C3A; border-radius: 0 0 3px 3px; }
+    .chalk-piece { position: absolute; top: -5px; height: 6px; border-radius: 3px; background: #F1EEDF; }
+
+    /* ---------- Register (Forms) ---------- */
+    .reg { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; box-shadow: var(--shadow); }
+    .reg-head { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 2px solid var(--accent); }
+    .form-input { background: transparent; border: 1px dashed var(--line); color: var(--tx); padding: 10px 14px; border-radius: 4px; outline: none; width: 100%; font-size: 16px; transition: border 0.2s; font-weight: 600; text-align: center; }
+    .form-input:focus { border-style: solid; border-color: var(--accent); }
+    .form-input::placeholder { color: var(--tx-soft); font-weight: 400; opacity: 0.5; }
+    .form-label { display: block; font-size: 12px; color: var(--tx-soft); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; text-align: center; }
+
+    .btn-primary { background: var(--accent); color: #fff; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: 600; transition: opacity 0.2s; display: inline-flex; align-items: center; gap: 8px; justify-content: center; }
+    html[data-dash-mode="light"] .btn-primary { color: #fff; }
+    .btn-primary:hover { opacity: 0.85; }
+    .btn-secondary { background: transparent; color: var(--tx); border: 1px solid var(--line); padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: 600; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; }
+    .btn-secondary:hover { background: var(--hover); border-color: var(--tx-soft); }
+
+    @media print {
+        body * { visibility: hidden; }
+        #printable-report, #printable-report * { visibility: visible; }
+        #printable-report { position: absolute; left: 0; top: 0; width: 100%; background: white !important; color: black !important; padding: 20px; box-shadow: none !important; border: none !important; }
+        body { background: white !important; }
+        .print\:hidden { display: none !important; }
+    }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <filter id="rough" x="-10%" y="-10%" width="120%" height="120%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="4" result="n"/>
+        <feDisplacementMap in="SourceGraphic" in2="n" scale="2.4"/>
+    </filter>
+</svg>
+
+<div class="space-y-6">
+
+    <!-- FLASH MESSAGES -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="reg p-3 mb-6 print:hidden" style="border-left: 4px solid {% if category == 'error' %}#E74C3C{% else %}#2ECC71{% endif %}; background: rgba({% if category == 'error' %}231, 76, 60{% else %}46, 204, 113{% endif %}, 0.1);">
+            <p class="tx text-sm font-medium">{{ message }}</p>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- BLACKBOARD TOOLBAR -->
+    <form method="GET" action="/results" class="board print:hidden">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
+            <div class="flex flex-col md:flex-row items-start md:items-center">
+                <label class="lab w-24">Class:</label>
+                <select name="class_name" onchange="this.form.submit()">
+                    {% for cls in ['Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5'] %}
+                    <option value="{{ cls }}" {% if selected_class == cls %}selected{% endif %}>{{ cls }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex flex-col md:flex-row items-start md:items-center md:border-l-2 md:border-dashed md:border-white/20 md:pl-6">
+                <label class="lab w-24">Exam:</label>
+                <select name="exam_type" onchange="this.form.submit()">
+                    <option value="Unit Test 1" {% if selected_exam == 'Unit Test 1' %}selected{% endif %}>Unit Test 1</option>
+                    <option value="Half Yearly" {% if selected_exam == 'Half Yearly' %}selected{% endif %}>Half Yearly</option>
+                    <option value="Annual Exam" {% if selected_exam == 'Annual Exam' %}selected{% endif %}>Annual Exam</option>
+                </select>
+            </div>
+            <div class="flex flex-col md:flex-row items-start md:items-center md:border-l-2 md:border-dashed md:border-white/20 md:pl-6">
+                <label class="lab w-24">Student:</label>
+                <select name="student_id" onchange="this.form.submit()">
+                    <option value="">-- Select --</option>
+                    {% for student in students %}
+                    <option value="{{ student.student_id }}" {% if selected_student_id == student.student_id %}selected{% endif %}>
+                        #{{ student.roll_no }} - {{ student.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="tray" aria-hidden="true">
+            <span class="chalk-piece" style="left:18%; width:24px; transform:rotate(-2deg)"></span>
+            <span class="chalk-piece" style="left:70%; width:16px; background:#F2D675; transform:rotate(5deg)"></span>
+        </div>
+    </form>
+
+    {% if selected_student_id %}
+    <!-- MARKS INPUT SECTION -->
+    <div class="reg overflow-hidden print:hidden">
+        <div class="reg-head">
+            <div class="flex items-center gap-3">
+                <svg viewBox="0 0 24 24" width="22" height="22" class="rough tx" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+                <h2 class="tx font-bold text-base">Enter / Update Marks</h2>
+            </div>
+            <div class="flex items-center gap-3">
+                <a href="/results/export?class_name={{ selected_class }}&exam_type={{ selected_exam }}" class="btn-secondary text-sm">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    Export Class Results
+                </a>
+            </div>
+        </div>
+
+        <form method="POST" action="/results/save" class="p-6 md:p-8 space-y-6">
+            <input type="hidden" name="student_id" value="{{ selected_student_id }}">
+            <input type="hidden" name="class_name" value="{{ selected_class }}">
+            <input type="hidden" name="exam_type" value="{{ selected_exam }}">
+
+            <!-- MAX MARKS SETTING -->
+            <div class="flex flex-col md:flex-row items-center justify-between p-4 rounded-xl border border-dashed border-white/20 bg-white/5">
+                <div>
+                    <h3 class="tx font-bold text-sm">Max Marks (Per Subject)</h3>
+                    <p class="soft text-xs">Set the total possible marks for this exam type.</p>
+                </div>
+                <div class="mt-3 md:mt-0">
+                    <input type="number" id="max_marks_input" name="max_marks" value="{{ record.max_marks if record and record.max_marks else (20 if 'Unit Test' in selected_exam else 100) }}" required min="1" max="500" class="form-input w-24 text-center" oninput="calculateLiveTotal()">
+                </div>
+            </div>
+
+            <!-- MARKS GRID -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 pt-4">
+                {% for subj in ['hindi', 'english', 'math', 'evs', 'sanskrit', 'computer', 'art', 'gk'] %}
+                <div>
+                    <label class="form-label">{{ subj }}</label>
+                    <input type="number" name="{{ subj }}" value="{{ record[subj] if record else '' }}" placeholder="0" min="0" step="0.5" class="form-input marks-input" oninput="calculateLiveTotal()">
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="flex flex-col md:flex-row items-center justify-between pt-6 mt-4" style="border-top: 1px solid var(--rule);">
+                <div class="flex items-center gap-6 mb-4 md:mb-0">
+                    <div>
+                        <span class="soft text-xs uppercase tracking-wider block">Live Total</span>
+                        <span id="live-total" class="tx font-bold text-xl">0 / 0</span>
+                    </div>
+                    <div>
+                        <span class="soft text-xs uppercase tracking-wider block">Percentage</span>
+                        <span id="live-percent" class="tx font-bold text-xl text-emerald-400">0%</span>
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary w-full md:w-auto">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+                    Save Result Record
+                </button>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+
+    <!-- ============================================== -->
+    <!-- OFFICIAL REPORT CARD -->
+    <!-- ============================================== -->
+    {% if record and student_profile %}
+    {% set current_max = record.max_marks or 100 %}
+    <div id="printable-report" class="bg-white text-black p-8 rounded-2xl shadow-2xl mt-8 max-w-4xl mx-auto border-4 border-double border-gray-800 transition-all duration-300 relative z-10" style="background-image: url('data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' viewBox=\'0 0 100 100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M0 0h100v100H0z\' fill=\'%23ffffff\'/%3E%3Cpath d=\'M0 10h100v1H0z\' fill=\'%23f0f0f0\'/%3E%3C/svg%3E');">
+        
+        <div class="text-center border-b-4 border-gray-800 pb-6 mb-6">
+            <h1 class="text-4xl font-extrabold uppercase tracking-wide text-gray-900" style="font-family: 'Times New Roman', serif;">{{ current_school.name }}</h1>
+            <p class="text-gray-700 font-semibold mt-1">School Code: {{ current_school.code }} | Academic Session: 2026-2027</p>
+            <div class="mt-4 inline-block bg-gray-200 border-2 border-gray-800 px-6 py-1 rounded-full">
+                <h2 class="text-xl font-bold uppercase tracking-widest text-gray-800">{{ selected_exam }} - REPORT CARD</h2>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-x-8 gap-y-3 mb-8 text-sm">
+            <div class="border-b border-dashed border-gray-400 pb-1"><span class="font-bold uppercase w-32 inline-block text-gray-600">Student Name:</span> <span class="text-lg font-semibold text-gray-900">{{ student_profile.name }}</span></div>
+            <div class="border-b border-dashed border-gray-400 pb-1"><span class="font-bold uppercase w-32 inline-block text-gray-600">Roll Number:</span> <span class="text-lg font-semibold text-gray-900">#{{ student_profile.roll_no }}</span></div>
+            <div class="border-b border-dashed border-gray-400 pb-1"><span class="font-bold uppercase w-32 inline-block text-gray-600">Class:</span> <span class="text-gray-900 font-medium">{{ student_profile.class_name }}</span></div>
+            <div class="border-b border-dashed border-gray-400 pb-1"><span class="font-bold uppercase w-32 inline-block text-gray-600">Date of Birth:</span> <span class="text-gray-900 font-medium">{{ student_profile.dob }}</span></div>
+            <div class="border-b border-dashed border-gray-400 pb-1"><span class="font-bold uppercase w-32 inline-block text-gray-600">Father's Name:</span> <span class="text-gray-900 font-medium">{{ student_profile.father_name }}</span></div>
+            <div class="border-b border-dashed border-gray-400 pb-1"><span class="font-bold uppercase w-32 inline-block text-gray-600">Mother's Name:</span> <span class="text-gray-900 font-medium">{{ student_profile.mother_name }}</span></div>
+        </div>
+
+        <table class="w-full border-2 border-gray-800 text-left mb-8">
+            <thead>
+                <tr class="bg-gray-100 border-b-2 border-gray-800 text-gray-800">
+                    <th class="border-r border-gray-400 p-3 font-bold uppercase w-1/2">Subject</th>
+                    <th class="border-r border-gray-400 p-3 font-bold uppercase text-center w-1/4">Max Marks</th>
+                    <th class="p-3 font-bold uppercase text-center w-1/4">Marks Obtained</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-400">
+                {% for subj, val in [('Hindi', record.hindi), ('English', record.english), ('Mathematics', record.math), ('EVS (Science)', record.evs), ('Sanskrit', record.sanskrit), ('Computer', record.computer), ('Art / Drawing', record.art), ('General Knowledge', record.gk)] %}
+                <tr>
+                    <td class="border-r border-gray-400 p-2 pl-4 font-semibold text-gray-800">{{ subj }}</td>
+                    <td class="border-r border-gray-400 p-2 text-center text-gray-600">{{ current_max }}</td>
+                    <td class="p-2 text-center font-bold text-gray-900">{{ val }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot class="border-t-2 border-gray-800 bg-gray-100">
+                <tr>
+                    <th class="border-r border-gray-400 p-3 font-bold uppercase text-right text-gray-800">Grand Total:</th>
+                    <th class="border-r border-gray-400 p-3 font-bold text-center text-gray-800">{{ current_max * 8 }}</th>
+                    <th class="p-3 font-extrabold text-center text-lg text-gray-900">{{ record.total_marks }}</th>
+                </tr>
+            </tfoot>
+        </table>
+
+        <div class="flex justify-between items-center border-2 border-gray-800 p-4 bg-gray-50 rounded-lg">
+            <div>
+                <p class="text-gray-600 uppercase font-bold text-xs tracking-wider">Overall Percentage</p>
+                <p class="text-3xl font-extrabold text-gray-900 mt-1">{{ record.percentage }}%</p>
+            </div>
+            <div class="text-right">
+                <p class="text-gray-600 uppercase font-bold text-xs tracking-wider">Final Grade</p>
+                <p class="text-4xl font-extrabold text-gray-900 mt-1">{{ record.grade }}</p>
+            </div>
+        </div>
+        
+        <div class="flex justify-between mt-20 px-8 text-sm font-bold uppercase tracking-wide text-gray-600">
+            <div class="border-t-2 border-gray-800 pt-2 text-center w-48">Class Teacher Sign.</div>
+            <div class="border-t-2 border-gray-800 pt-2 text-center w-48">Principal / Head Sign.</div>
+        </div>
+    </div>
+    
+    <div class="mt-8 text-center print:hidden">
+        <button onclick="window.print()" class="btn-primary px-10 py-3 rounded-full font-bold shadow-lg mx-auto">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+            Print Official Report Card
+        </button>
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- Alpine.js & Theme/Logic Script -->
+<script>
+    /* ---------- Live Auto-Calculation Feature (UPDATED FOR DYNAMIC MAX MARKS) ---------- */
+    function calculateLiveTotal() {
+        const inputs = document.querySelectorAll('.marks-input');
+        const maxInput = document.getElementById('max_marks_input');
+        
+        if (!maxInput) return; // Form not visible
+        
+        const maxPerSubj = parseFloat(maxInput.value) || 100;
+        const grandMax = maxPerSubj * 8;
+        
+        let total = 0;
+        let count = 0;
+        
+        inputs.forEach(input => {
+            const val = parseFloat(input.value);
+            if(!isNaN(val) && val >= 0) {
+                total += val;
+                count++;
+            }
+        });
+        
+        const percent = grandMax > 0 ? ((total / grandMax) * 100).toFixed(1) : 0;
+        
+        document.getElementById('live-total').textContent = `${total} / ${grandMax}`;
+        document.getElementById('live-percent').textContent = `${percent}%`;
+    }
+    
+    document.addEventListener("DOMContentLoaded", calculateLiveTotal);
+
+    /* ---------- Auto Theme Sync ---------- */
+    (function () {
+        function lum(c) { const m = c.match(/[\d.]+/g); if (!m) return null; if (m.length > 3 && parseFloat(m[3]) === 0) return null; return (0.299*m[0] + 0.587*m[1] + 0.114*m[2]) / 255; }
+        function syncTheme() {
+            let L = null;
+            [document.body, document.documentElement, document.querySelector('main')].forEach(el => {
+                if (L === null && el) L = lum(getComputedStyle(el).backgroundColor);
+            });
+            if (L === null) { const t = lum(getComputedStyle(document.body).color); L = t === null ? 0 : 1 - t; }
+            const mode = L > 0.5 ? 'light' : 'dark';
+            if (document.documentElement.getAttribute('data-dash-mode') !== mode) {
+                document.documentElement.setAttribute('data-dash-mode', mode);
+            }
+        }
+        syncTheme();
+        const watch = { attributes: true, attributeFilter: ['class', 'style', 'data-theme'] };
+        new MutationObserver(syncTheme).observe(document.documentElement, watch);
+        new MutationObserver(syncTheme).observe(document.body, watch);
+        setInterval(syncTheme, 800);
+    })();
+</script>
+{% endblock %}

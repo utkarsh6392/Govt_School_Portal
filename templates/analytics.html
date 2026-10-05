@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+{% set active_page = 'analytics' %}
+{% block page_title %}Analytics & Visual Insights{% endblock %}
+
+{% block content %}
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap');
+
+    /* ---------- Theme tokens ---------- */
+    :root {
+        --tx: #e8eaf2; --tx-soft: #9aa3bd; --line: rgba(255,255,255,.14);
+        --surface: rgba(255,255,255,.04); --hover: rgba(255,255,255,.06);
+        --accent: #8FA8E8; --margin: rgba(224,122,122,.75); --rule: rgba(255,255,255,.08);
+        --shadow: none;
+    }
+    html[data-dash-mode="light"] {
+        --tx: #1c2233; --tx-soft: #5a6280; --line: rgba(40,55,100,.18);
+        --surface: #ffffff; --hover: rgba(47,75,138,.07);
+        --accent: #2F4B8A; --margin: rgba(192,57,43,.6); --rule: rgba(47,75,138,.13);
+        --shadow: 0 1px 2px rgba(30,40,90,.08);
+    }
+    .tx { color: var(--tx); } .soft { color: var(--tx-soft); }
+    .hand { font-family: 'Kalam', cursive; }
+    .rough { filter: url(#rough); }
+
+    /* ---------- Blackboard ---------- */
+    .board {
+        position: relative; color: #F1EEDF; font-family: 'Kalam', cursive;
+        background: radial-gradient(ellipse at 18% 12%, rgba(255,255,255,.08), transparent 55%), radial-gradient(ellipse at 85% 92%, rgba(255,255,255,.05), transparent 50%), #2A4A3E;
+        border: 10px solid #8A6A45; border-radius: 4px;
+        box-shadow: inset 0 0 0 2px rgba(0,0,0,.3), inset 0 0 50px rgba(0,0,0,.4), 0 2px 0 #6e5233;
+        padding: 24px; margin-bottom: 24px;
+    }
+    .tray { position: absolute; bottom: -10px; left: 0; right: 0; height: 10px; margin: 0 6px; background: #7A5C3A; border-radius: 0 0 3px 3px; }
+    .chalk-piece { position: absolute; top: -5px; height: 6px; border-radius: 3px; background: #F1EEDF; }
+
+    /* ---------- Register Cards ---------- */
+    .reg { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; box-shadow: var(--shadow); }
+</style>
+
+<!-- SVG Filters -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <filter id="rough" x="-10%" y="-10%" width="120%" height="120%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="4" result="n"/>
+        <feDisplacementMap in="SourceGraphic" in2="n" scale="2.4"/>
+    </filter>
+</svg>
+
+<div class="pb-10 space-y-6">
+
+    <!-- HEADER SECTION (Blackboard Style) -->
+    <div class="board flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+            <h1 class="text-3xl font-bold tracking-wide">Executive Analytics</h1>
+            <p class="opacity-80 mt-1" style="font-family: 'Inter', sans-serif; font-size: 14px;">Real-time institutional intelligence & visual trends</p>
+        </div>
+        <div class="border-2 border-dashed border-[#F2D675] text-[#F2D675] px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2" style="font-family: 'Inter', sans-serif;">
+            <span class="w-2 h-2 rounded-full bg-[#F2D675] animate-pulse"></span>
+            Live Data Feed Connected
+        </div>
+        <div class="tray" aria-hidden="true">
+            <span class="chalk-piece" style="left:12%; width:24px; transform:rotate(-2deg)"></span>
+            <span class="chalk-piece" style="left:85%; width:16px; background:#F2D675; transform:rotate(5deg)"></span>
+        </div>
+    </div>
+
+    <!-- TOP KPI SUMMARY CARDS -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Card 1 -->
+        <div class="reg p-6 relative overflow-hidden hover:-translate-y-1 transition-transform duration-300" style="border-top: 4px solid #6366f1;">
+            <div class="absolute right-4 top-4 p-2 opacity-50 tx">
+                <svg class="w-8 h-8 rough" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+            </div>
+            <p class="text-xs soft uppercase font-bold tracking-wider">Total Enrolled</p>
+            <h3 class="text-3xl font-bold tx mt-2 hand">{{ total_students }}</h3>
+            <span class="text-xs font-semibold mt-2 inline-block" style="color: #10b981;">100% Active Records</span>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="reg p-6 relative overflow-hidden hover:-translate-y-1 transition-transform duration-300" style="border-top: 4px solid #10b981;">
+            <div class="absolute right-4 top-4 p-2 opacity-50 tx">
+                <svg class="w-8 h-8 rough" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+            </div>
+            <p class="text-xs soft uppercase font-bold tracking-wider">Avg. Academic Score</p>
+            <h3 class="text-3xl font-bold tx mt-2 hand">{{ avg_percentage }}%</h3>
+            <span class="text-xs font-semibold mt-2 inline-block" style="color: #6366f1;">Based on Exam Evaluations</span>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="reg p-6 relative overflow-hidden hover:-translate-y-1 transition-transform duration-300" style="border-top: 4px solid #f59e0b;">
+            <div class="absolute right-4 top-4 p-2 opacity-50 tx">
+                <svg class="w-8 h-8 rough" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
+            <p class="text-xs soft uppercase font-bold tracking-wider">Avg. Attendance Rate</p>
+            <h3 class="text-3xl font-bold tx mt-2 hand">{{ avg_attendance }}%</h3>
+            <span class="text-xs font-semibold mt-2 inline-block" style="color: #3b82f6;">Monthly Aggregated</span>
+        </div>
+    </div>
+
+    <!-- 6 CHARTS GRID -->
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        
+        <div class="reg p-5 flex flex-col justify-between">
+            <h3 class="text-sm font-bold tx mb-4 uppercase tracking-wide border-b pb-2" style="border-color: var(--rule);">Class-wise Enrollment</h3>
+            <div class="relative h-56 w-full"><canvas id="classStrengthChart"></canvas></div>
+        </div>
+
+        <div class="reg p-5 flex flex-col justify-between">
+            <h3 class="text-sm font-bold tx mb-4 uppercase tracking-wide border-b pb-2" style="border-color: var(--rule);">Grade Performance</h3>
+            <div class="relative h-56 w-full"><canvas id="gradeDistChart"></canvas></div>
+        </div>
+
+        <div class="reg p-5 flex flex-col justify-between">
+            <h3 class="text-sm font-bold tx mb-4 uppercase tracking-wide border-b pb-2" style="border-color: var(--rule);">Gender Diversity</h3>
+            <div class="relative h-56 w-full"><canvas id="genderChart"></canvas></div>
+        </div>
+
+        <div class="reg p-5 flex flex-col justify-between">
+            <h3 class="text-sm font-bold tx mb-4 uppercase tracking-wide border-b pb-2" style="border-color: var(--rule);">Material Dispatch</h3>
+            <div class="relative h-56 w-full"><canvas id="materialChart"></canvas></div>
+        </div>
+
+        <div class="reg p-5 flex flex-col justify-between">
+            <h3 class="text-sm font-bold tx mb-4 uppercase tracking-wide border-b pb-2" style="border-color: var(--rule);">Overall Pass Ratio</h3>
+            <div class="relative h-56 w-full"><canvas id="passRatioChart"></canvas></div>
+        </div>
+
+        <div class="reg p-5 flex flex-col justify-between">
+            <h3 class="text-sm font-bold tx mb-4 uppercase tracking-wide border-b pb-2" style="border-color: var(--rule);">Resource Balance</h3>
+            <div class="relative h-56 w-full"><canvas id="radarChart"></canvas></div>
+        </div>
+
+    </div>
+
+    <!-- SMART INSIGHTS SUMMARY BOX -->
+    <div class="board mt-6" style="background: rgba(42, 74, 62, 0.5);">
+        <div class="flex items-center gap-3 mb-4 border-b-2 border-dashed border-white/20 pb-2">
+            <svg class="w-6 h-6 rough" fill="none" stroke="#F2D675" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            <h2 class="text-xl font-bold" style="color: #F2D675;">Smart Insight Summary</h2>
+        </div>
+        <div id="smartSummaryText" class="text-sm md:text-base leading-relaxed space-y-3 opacity-90" style="font-family: 'Inter', sans-serif;">
+            <!-- Text will be auto-generated by JS -->
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    /* ---------- Theme Sync & Chart Config ---------- */
+    function syncTheme() {
+        const mode = document.documentElement.getAttribute('data-dash-mode') || 'dark';
+        Chart.defaults.color = mode === 'light' ? '#5a6280' : '#9aa3bd';
+        Chart.defaults.borderColor = mode === 'light' ? 'rgba(40,55,100,.1)' : 'rgba(255, 255, 255, 0.05)';
+    }
+    syncTheme();
+
+    Chart.defaults.font.family = "'Inter', sans-serif";
+    Chart.defaults.plugins.tooltip.padding = 10;
+    Chart.defaults.plugins.tooltip.cornerRadius = 4;
+
+    // Backend Data
+    const classData = {{ class_strength | tojson | safe }};
+    const gradeData = {{ grade_dist | tojson | safe }};
+    const genderData = {{ gender_dist | tojson | safe }};
+    const materialStats = {{ material_stats | tojson | safe }};
+    const totalStudents = {{ total_students }};
+    const avgAttendance = {{ avg_attendance }};
+
+    // 1. Class Strength
+    new Chart(document.getElementById('classStrengthChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: classData.map(item => item.class_name),
+            datasets: [{
+                label: 'Students', data: classData.map(item => item.count),
+                backgroundColor: 'rgba(99, 102, 241, 0.7)', borderColor: '#6366f1', borderWidth: 1, borderRadius: 4
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+    });
+
+    // 2. Grade Distribution
+    new Chart(document.getElementById('gradeDistChart').getContext('2d'), {
+        type: 'doughnut',
+        data: {
+            labels: gradeData.map(item => item.grade),
+            datasets: [{
+                data: gradeData.map(item => item.count),
+                backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ef4444', '#ec4899'],
+                borderWidth: 2, borderColor: 'var(--surface)', hoverOffset: 4
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: 'right' } } }
+    });
+
+    // 3. Gender Ratio
+    new Chart(document.getElementById('genderChart').getContext('2d'), {
+        type: 'pie',
+        data: {
+            labels: genderData.map(item => item.gender),
+            datasets: [{
+                data: genderData.map(item => item.count),
+                backgroundColor: ['#3b82f6', '#ec4899'], borderWidth: 2, borderColor: 'var(--surface)', hoverOffset: 4
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+    });
+
+    // 4. Material Dispatch
+    new Chart(document.getElementById('materialChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: ['Uniform', 'Books', 'Shoes', 'Bag'],
+            datasets: [{
+                label: 'Distributed',
+                data: [materialStats.uniform||0, materialStats.books||0, materialStats.shoes||0, materialStats.bag||0],
+                backgroundColor: 'rgba(59, 130, 246, 0.7)', borderColor: '#3b82f6', borderWidth: 1, borderRadius: 4
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+    });
+
+    // 5. Pass vs Needs Improvement
+    let passCount = 0, failCount = 0;
+    gradeData.forEach(item => {
+        if(['E', 'E1', 'E2', 'F', 'Fail'].includes(item.grade)) failCount += item.count;
+        else passCount += item.count;
+    });
+
+    new Chart(document.getElementById('passRatioChart').getContext('2d'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Passed', 'Needs Improvement'],
+            datasets: [{
+                data: [passCount, failCount], backgroundColor: ['#10b981', '#ef4444'], borderWidth: 2, borderColor: 'var(--surface)'
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, rotation: -90, circumference: 180, cutout: '70%', plugins: { legend: { position: 'bottom' } } }
+    });
+
+    // 6. Resource Coverage (Radar)
+    new Chart(document.getElementById('radarChart').getContext('2d'), {
+        type: 'radar',
+        data: {
+            labels: ['Uniform', 'Books', 'Shoes', 'Bags'],
+            datasets: [{
+                label: 'Coverage',
+                data: [materialStats.uniform||0, materialStats.books||0, materialStats.shoes||0, materialStats.bag||0],
+                backgroundColor: 'rgba(139, 92, 246, 0.3)', borderColor: '#8b5cf6', borderWidth: 2
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { r: { ticks: { display: false } } } }
+    });
+
+    // Smart Summary Generation
+    window.onload = function() {
+        let maxClass = classData.reduce((max, obj) => obj.count > max.count ? obj : max, {class_name: 'None', count: 0});
+        let boysCount = genderData.find(g => g.gender.toLowerCase() === 'boy' || g.gender.toLowerCase() === 'male')?.count || 0;
+        let girlsCount = genderData.find(g => g.gender.toLowerCase() === 'girl' || g.gender.toLowerCase() === 'female')?.count || 0;
+        let highestMaterial = Math.max(materialStats.uniform||0, materialStats.books||0, materialStats.shoes||0, materialStats.bag||0);
+        
+        let summaryHTML = `
+            <p><strong style="color: #fff;">Enrollment Insight:</strong> The portal currently manages <strong>${totalStudents} active students</strong>. The highest enrollment is in <strong>${maxClass.class_name}</strong> with ${maxClass.count} students. The gender distribution consists of ${boysCount} Boys and ${girlsCount} Girls.</p>
+            <p><strong style="color: #fff;">Academic & Attendance Health:</strong> The overall average attendance stands at <strong>${avgAttendance}%</strong>. Out of all evaluated students, <strong>${passCount}</strong> have successfully cleared their exams, while <strong>${failCount}</strong> students have been identified as needing academic improvement.</p>
+            <p><strong style="color: #fff;">Resource Distribution:</strong> The highest distributed resource count is currently <strong>${highestMaterial}</strong>. Visual coverage indicates balanced distribution across Uniforms, Books, Shoes, and Bags.</p>
+        `;
+        document.getElementById('smartSummaryText').innerHTML = summaryHTML;
+    };
+</script>
+{% endblock %}

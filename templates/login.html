@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - UP Govt Schools Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f8fafc;
+            position: relative;
+            z-index: 1;
+            overflow-x: hidden;
+        }
+
+        /* PERFECT SIZED WATERMARK - OPACITY BADHA DI GAYI HAI */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: url("{{ url_for('static', filename='up_logo.jpg') }}");
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: 70vw;
+            opacity: 0.40; /* Pehle 0.15 tha, ab aur dark/visible hoga */
+            mix-blend-mode: multiply;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* ---------- Background depth field (parallax orbs) ---------- */
+        .orb-field {
+            position: fixed;
+            inset: 0;
+            overflow: hidden;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .orb {
+            position: absolute;
+            border-radius: 9999px;
+            filter: blur(55px);
+            will-change: transform;
+            transition: transform 0.25s ease-out;
+        }
+        .orb-1 { width: 380px; height: 380px; top: 6%;  left: 8%;  background: radial-gradient(circle, rgba(99,102,241,0.35), transparent 70%); }
+        .orb-2 { width: 320px; height: 320px; bottom: 8%; right: 6%; background: radial-gradient(circle, rgba(168,85,247,0.30), transparent 70%); }
+        .orb-3 { width: 240px; height: 240px; top: 52%; left: 60%; background: radial-gradient(circle, rgba(59,130,246,0.28), transparent 70%); }
+
+        .orb-pulse {
+            width: 100%;
+            height: 100%;
+            border-radius: 9999px;
+            animation: orbPulse 6s ease-in-out infinite;
+        }
+        .orb-2 .orb-pulse { animation-delay: 1.2s; }
+        .orb-3 .orb-pulse { animation-delay: 2.4s; }
+
+        @keyframes orbPulse {
+            0%, 100% { transform: scale(1);    opacity: 0.75; }
+            50%      { transform: scale(1.18); opacity: 1; }
+        }
+
+        /* ---------- Floating ambient particles ---------- */
+        .particle-field {
+            position: fixed;
+            inset: 0;
+            overflow: hidden;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .particle {
+            position: absolute;
+            bottom: -20px;
+            border-radius: 9999px;
+            background: radial-gradient(circle, rgba(255,255,255,0.95), rgba(139,127,247,0.45) 60%, transparent 75%);
+            filter: blur(0.5px);
+            animation-name: particleFloat;
+            animation-timing-function: linear;
+            animation-iteration-count: infinite;
+        }
+        @keyframes particleFloat {
+            0%   { transform: translateY(0) translateX(0); opacity: 0; }
+            8%   { opacity: 0.7; }
+            92%  { opacity: 0.55; }
+            100% { transform: translateY(-115vh) translateX(var(--drift, 30px)); opacity: 0; }
+        }
+
+        /* ---------- Cursor-following glow ---------- */
+        #cursor-glow {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 600px;
+            height: 600px;
+            border-radius: 9999px;
+            pointer-events: none;
+            background: radial-gradient(circle, rgba(108,93,211,0.20) 0%, rgba(143,127,247,0.10) 35%, transparent 70%);
+            filter: blur(30px);
+            transform: translate(-50%, -50%);
+            z-index: 0;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            will-change: transform, opacity;
+        }
+
+        /* ---------- Card - TRANSPARENCY BADHA DI GAYI HAI ---------- */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.35); /* Pehle 0.85 tha, ab zyada transparent hai */
+            backdrop-filter: blur(8px); /* Blur kam kiya hai taaki peeche ka logo dikhe */
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s ease;
+            will-change: transform;
+        }
+        .glass-panel.shadow-lift {
+            box-shadow: 0 35px 65px -15px rgba(99,102,241,0.35), 0 15px 30px -10px rgba(0,0,0,0.15);
+        }
+        
+        .glass-panel::after {
+            content: '';
+            position: absolute;
+            top: -60%;
+            left: -60%;
+            width: 35%;
+            height: 220%;
+            background: linear-gradient(120deg, transparent, rgba(255,255,255,0.55), transparent);
+            transform: rotate(20deg);
+            transition: left 0.75s ease;
+            pointer-events: none;
+        }
+        .glass-panel:hover::after { left: 130%; }
+
+        #card-float {
+            animation: cardFloat 5s ease-in-out infinite;
+            animation-delay: 1.05s;
+        }
+        @keyframes cardFloat {
+            0%, 100% { transform: translateY(0); }
+            50%      { transform: translateY(-10px); }
+        }
+
+        .input-field:focus {
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+            transform: translateY(-1px);
+        }
+        .input-wrap:focus-within svg { color: #6C5DD3; }
+        .input-wrap svg { transition: color 0.2s ease; }
+
+        /* ---------- Entrance choreography ---------- */
+        @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(22px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes gentleScale {
+            from { opacity: 0; transform: scale(0.82); }
+            to   { opacity: 1; transform: scale(1); }
+        }
+        @keyframes welcomePulse {
+            0%   { box-shadow: 0 0 0 0 rgba(99,102,241,0.35); }
+            70%  { box-shadow: 0 0 0 18px rgba(99,102,241,0); }
+            100% { box-shadow: 0 0 0 0 rgba(99,102,241,0); }
+        }
+        @keyframes barReveal {
+            from { transform: scaleX(0); }
+            to   { transform: scaleX(1); }
+        }
+        @keyframes popIn {
+            0%   { opacity: 0; transform: translateY(40px) scale(0.9); }
+            60%  { opacity: 1; transform: translateY(-8px) scale(1.03); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes logoFloat {
+            0%, 100% { transform: translateY(0); }
+            50%      { transform: translateY(-6px); }
+        }
+
+        .animate-in-logo { animation: gentleScale 0.6s cubic-bezier(0.16,1,0.3,1) both, welcomePulse 1.6s ease-out 0.55s 1; }
+        #logo-float { animation: logoFloat 4.2s ease-in-out infinite; animation-delay: 1s; }
+        .animate-in-heading { animation: fadeSlideUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.15s both; }
+        .animate-in-sub     { animation: fadeSlideUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.25s both; }
+        .animate-in-card    { animation: popIn 0.85s cubic-bezier(0.34, 1.56, 0.64, 1) 0.35s both; }
+        .top-bar-reveal     { animation: barReveal 0.8s cubic-bezier(0.65,0,0.35,1) 0.2s both; transform-origin: left; }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation: none !important; transition: none !important; }
+            #cursor-glow, .orb-field, .particle-field { display: none !important; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <!-- Layered background depth (parallax orbs) -->
+    <div class="orb-field" aria-hidden="true">
+        <div class="orb orb-1" data-depth="25"><div class="orb-pulse"></div></div>
+        <div class="orb orb-2" data-depth="45"><div class="orb-pulse"></div></div>
+        <div class="orb orb-3" data-depth="15"><div class="orb-pulse"></div></div>
+    </div>
+
+    <!-- Floating ambient particles -->
+    <div class="particle-field" id="particle-field" aria-hidden="true"></div>
+
+    <!-- Cursor-following ambient glow -->
+    <div id="cursor-glow"></div>
+
+    <!-- Main Container -->
+    <div class="w-full max-w-md relative z-10">
+
+        <!-- Logo & Header Section -->
+        <div class="text-center mb-8">
+            <div id="logo-float">
+                <div class="animate-in-logo inline-flex items-center justify-center w-28 h-28 rounded-full bg-white border-4 border-indigo-100 shadow-xl mb-4 overflow-hidden">
+                   <img src="{{ url_for('static', filename='up_logo.jpg') }}" alt="UP Govt Logo" class="w-full h-full object-cover scale-[1.4] mix-blend-multiply">
+                </div>
+            </div>
+            <h1 class="animate-in-heading text-3xl font-bold text-gray-900 tracking-tight">Welcome Back</h1>
+            <p class="animate-in-sub text-gray-500 mt-2 text-sm font-medium">UP Govt. Schools Management Portal</p>
+        </div>
+
+        <!-- Login Form Card -->
+        <div class="animate-in-card">
+            <div id="card-float">
+                <div id="login-card" class="glass-panel rounded-3xl p-8 relative overflow-hidden">
+
+                    <div class="top-bar-reveal absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500"></div>
+
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="mb-6 p-4 rounded-xl text-sm font-medium flex items-center gap-2
+                                    {% if category == 'error' %} bg-red-50 text-red-600 border border-red-100
+                                    {% else %} bg-emerald-50 text-emerald-600 border border-emerald-100 {% endif %}">
+                                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    {{ message }}
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <form method="POST" action="/login" class="space-y-5">
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1.5">School Code</label>
+                            <div class="relative input-wrap">
+                                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                                </div>
+                                <input type="text" name="school_code" required placeholder="e.g. MASTER or GOVT001"
+                                    class="input-field w-full pl-10 pr-4 py-3 bg-white/40 border border-gray-200 rounded-xl text-gray-900 font-bold uppercase placeholder:normal-case placeholder:text-gray-500 placeholder:font-medium focus:outline-none focus:border-indigo-500 focus:bg-white transition-all">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1.5">Password</label>
+                            <div class="relative input-wrap">
+                                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                                </div>
+                                <input type="password" name="password" required placeholder="••••••••"
+                                    class="input-field w-full pl-10 pr-4 py-3 bg-white/40 border border-gray-200 rounded-xl text-gray-900 font-medium placeholder:text-gray-500 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all">
+                            </div>
+                        </div>
+
+                        <button type="submit" class="group w-full mt-2 bg-[#6C5DD3] hover:bg-[#8F7FF7] text-white font-bold py-3.5 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2">
+                            Secure Login
+                            <svg class="w-5 h-5 transition-transform duration-200 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                        </button>
+
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (reduceMotion) return;
+
+            var particleField = document.getElementById('particle-field');
+            var particleCount = window.innerWidth < 640 ? 14 : 24;
+            for (var i = 0; i < particleCount; i++) {
+                var p = document.createElement('div');
+                p.className = 'particle';
+                var size = (Math.random() * 4 + 2).toFixed(1);        
+                var left = (Math.random() * 100).toFixed(2);          
+                var duration = (Math.random() * 14 + 12).toFixed(1);  
+                var delay = (Math.random() * -duration).toFixed(1);   
+                var drift = (Math.random() * 80 - 40).toFixed(0) + 'px';
+
+                p.style.width = size + 'px';
+                p.style.height = size + 'px';
+                p.style.left = left + '%';
+                p.style.animationDuration = duration + 's';
+                p.style.animationDelay = delay + 's';
+                p.style.setProperty('--drift', drift);
+                particleField.appendChild(p);
+            }
+
+            var glow = document.getElementById('cursor-glow');
+            var card = document.getElementById('login-card');
+            var orbs = document.querySelectorAll('.orb');
+
+            var mouseX = window.innerWidth / 2;
+            var mouseY = window.innerHeight / 2;
+            var glowX = mouseX;
+            var glowY = mouseY;
+
+            window.addEventListener('mousemove', function (e) {
+                mouseX = e.clientX;
+                mouseY = e.clientY;
+                glow.style.opacity = '1';
+
+                var relX = (mouseX / window.innerWidth - 0.5) * 2;   
+                var relY = (mouseY / window.innerHeight - 0.5) * 2;  
+                orbs.forEach(function (orb) {
+                    var depth = parseFloat(orb.dataset.depth) || 20;
+                    orb.style.transform = 'translate(' + (relX * depth) + 'px, ' + (relY * depth) + 'px)';
+                });
+            });
+
+            document.addEventListener('mouseleave', function () {
+                glow.style.opacity = '0';
+            });
+
+            function animateGlow() {
+                glowX += (mouseX - glowX) * 0.12;
+                glowY += (mouseY - glowY) * 0.12;
+                glow.style.transform = 'translate(' + glowX + 'px, ' + glowY + 'px) translate(-50%, -50%)';
+                requestAnimationFrame(animateGlow);
+            }
+            requestAnimationFrame(animateGlow);
+
+            card.addEventListener('mousemove', function (e) {
+                var rect = card.getBoundingClientRect();
+                var x = e.clientX - rect.left;
+                var y = e.clientY - rect.top;
+                var centerX = rect.width / 2;
+                var centerY = rect.height / 2;
+                var rotateX = ((y - centerY) / centerY) * -3.5;
+                var rotateY = ((x - centerX) / centerX) * 3.5;
+                card.style.transform = 'perspective(1000px) rotateX(' + rotateX + 'deg) rotateY(' + rotateY + 'deg) scale3d(1.015,1.015,1.015)';
+            });
+
+            card.addEventListener('mouseenter', function () {
+                card.classList.add('shadow-lift');
+            });
+
+            card.addEventListener('mouseleave', function () {
+                card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1,1,1)';
+                card.classList.remove('shadow-lift');
+            });
+        })();
+    </script>
+</body>
+</html>

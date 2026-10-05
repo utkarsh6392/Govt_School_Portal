@@ -1,0 +1,354 @@
+{% extends "base.html" %}
+{% set active_page = 'students' %}
+{% block page_title %}Students Directory{% endblock %}
+
+{% block content %}
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap');
+
+    /* ---------- Theme tokens ---------- */
+    :root {
+        --tx: #e8eaf2; --tx-soft: #9aa3bd; --line: rgba(255,255,255,.14);
+        --surface: rgba(255,255,255,.04); --hover: rgba(255,255,255,.06);
+        --accent: #8FA8E8; --margin: rgba(224,122,122,.75); --rule: rgba(255,255,255,.08);
+        --shadow: none;
+    }
+    html[data-dash-mode="light"] {
+        --tx: #1c2233; --tx-soft: #5a6280; --line: rgba(40,55,100,.18);
+        --surface: #ffffff; --hover: rgba(47,75,138,.07);
+        --accent: #2F4B8A; --margin: rgba(192,57,43,.6); --rule: rgba(47,75,138,.13);
+        --shadow: 0 1px 2px rgba(30,40,90,.08);
+    }
+    .tx { color: var(--tx); } .soft { color: var(--tx-soft); }
+    .hand { font-family: 'Kalam', cursive; }
+    .rough { filter: url(#rough); }
+
+    /* ---------- Blackboard (Tabs & Search) ---------- */
+    .board {
+        position: relative; color: #F1EEDF; font-family: 'Kalam', cursive;
+        background:
+            radial-gradient(ellipse at 18% 12%, rgba(255,255,255,.08), transparent 55%),
+            radial-gradient(ellipse at 85% 92%, rgba(255,255,255,.05), transparent 50%),
+            #2A4A3E;
+        border: 10px solid #8A6A45; border-radius: 4px;
+        box-shadow: inset 0 0 0 2px rgba(0,0,0,.3), inset 0 0 50px rgba(0,0,0,.4), 0 2px 0 #6e5233;
+        padding: 20px 24px; margin-bottom: 24px;
+    }
+    .chalk-tab {
+        font-size: 18px; padding: 4px 8px; border-bottom: 2px dashed transparent; transition: all 0.2s; cursor: pointer;
+    }
+    .chalk-tab.active { color: #F2D675; border-bottom-color: #F2D675; }
+    .chalk-tab:not(.active) { color: #F1EEDF; opacity: 0.8; }
+    .chalk-tab:hover:not(.active) { opacity: 1; }
+    
+    .chalk-search {
+        background: rgba(0,0,0,0.25); border: 2px dashed rgba(241,238,223,.4); color: #F1EEDF;
+        font-family: 'Kalam', cursive; font-size: 18px; padding: 6px 16px; border-radius: 6px; outline: none; width: 100%; max-width: 300px;
+        transition: border 0.2s;
+    }
+    .chalk-search::placeholder { color: rgba(241,238,223,.6); }
+    .chalk-search:focus { border-color: #F2D675; }
+
+    .tray { position: absolute; bottom: -10px; left: 0; right: 0; height: 10px; margin: 0 6px; background: #7A5C3A; border-radius: 0 0 3px 3px; }
+    .chalk-piece { position: absolute; top: -5px; height: 6px; border-radius: 3px; background: #F1EEDF; }
+
+    /* ---------- Register (table) ---------- */
+    .reg { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; box-shadow: var(--shadow); }
+    .reg-head { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between;
+                padding: 14px 20px; border-bottom: 2px solid var(--accent); }
+    
+    .reg table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .reg th { text-align: left; font-weight: 600; padding: 12px 16px; color: var(--tx-soft); border-bottom: 1px solid var(--line); white-space: nowrap; }
+    .reg td { padding: 10px 16px; border-bottom: 1px solid var(--rule); color: var(--tx); }
+    .reg .roll { width: 84px; border-right: 2px solid var(--margin); font-variant-numeric: tabular-nums; color: var(--tx-soft); }
+    .reg tr.student-row { transition: background .12s; }
+    .reg tr.student-row:hover { background: var(--hover); }
+
+    /* ---------- Buttons & Forms ---------- */
+    .btn-primary { background: var(--accent); color: #fff; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: 600; transition: opacity 0.2s; display: inline-flex; align-items: center; gap: 8px; }
+    html[data-dash-mode="light"] .btn-primary { color: #fff; }
+    .btn-primary:hover { opacity: 0.85; }
+
+    .btn-secondary { background: transparent; color: var(--tx); border: 1px solid var(--line); padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: 600; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; }
+    .btn-secondary:hover { background: var(--hover); border-color: var(--tx-soft); }
+
+    .form-input { background: transparent; border: 1px solid var(--line); color: var(--tx); padding: 10px 14px; border-radius: 4px; outline: none; width: 100%; font-size: 14px; transition: border 0.2s; }
+    .form-input:focus { border-color: var(--accent); }
+    .form-input option { background: #0B0F19; color: #fff; }
+    html[data-dash-mode="light"] .form-input option { background: #fff; color: #000; }
+    .form-label { display: block; font-size: 12px; color: var(--tx-soft); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+
+    [x-cloak] { display: none !important; }
+</style>
+
+<!-- SVG Filters -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <filter id="rough" x="-10%" y="-10%" width="120%" height="120%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="4" result="n"/>
+        <feDisplacementMap in="SourceGraphic" in2="n" scale="2.4"/>
+    </filter>
+</svg>
+
+<div x-data="studentsApp()">
+    
+    <!-- FLASH MESSAGES -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="reg p-3 mb-6" style="border-left: 4px solid #2ECC71; background: rgba(46, 204, 113, 0.1);">
+            <p class="tx text-sm font-medium">{{ message }}</p>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- BLACKBOARD TOOLBAR -->
+    <div class="board">
+        <div class="flex flex-col md:flex-row w-full justify-between items-start md:items-center gap-6">
+            <div class="flex flex-wrap items-center gap-3 md:gap-6">
+                <template x-for="cls in ['All', 'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5']">
+                    <button type="button" @click="currentClass = cls" class="chalk-tab" :class="currentClass === cls ? 'active' : ''">
+                        <span x-text="cls"></span>
+                    </button>
+                </template>
+            </div>
+            <div class="w-full md:w-auto">
+                <input type="search" x-model="searchQuery" class="chalk-search" placeholder="Search student name...">
+            </div>
+        </div>
+        <div class="tray" aria-hidden="true">
+            <span class="chalk-piece" style="left:25%; width:22px; transform:rotate(-3deg)"></span>
+            <span class="chalk-piece" style="left:75%; width:14px; background:#F2D675; transform:rotate(4deg)"></span>
+        </div>
+    </div>
+
+    <!-- DATA TABLE (Register Style) -->
+    <div class="reg overflow-hidden">
+        <div class="reg-head">
+            <div class="flex items-center gap-3">
+                <svg viewBox="0 0 24 24" width="22" height="22" class="rough tx" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                </svg>
+                <h2 class="tx font-bold text-base">Student Database</h2>
+            </div>
+            
+            <div class="flex flex-wrap items-center gap-3">
+                <a href="/students/export" class="btn-secondary text-sm">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    Export Excel
+                </a>
+                <button @click="modalOpen = true" class="btn-primary text-sm">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4v16m8-8H4"></path></svg>
+                    Add Admission
+                </button>
+            </div>
+        </div>
+
+        <div style="overflow-x:auto;">
+            <table id="students-table">
+                <thead>
+                    <tr>
+                        <th class="roll">Roll No</th>
+                        <th>Student Name</th>
+                        <th>Class</th>
+                        <th>Parents Details</th>
+                        <th>Gender</th>
+                        <th style="text-align: right;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in students %}
+                    <tr class="student-row" x-show="matches('{{ student.class_name }}', '{{ student.name }}')">
+                        <td class="roll">#{{ student.roll_no }}</td>
+                        <td style="font-weight:600;">{{ student.name }}</td>
+                        <td class="soft">{{ student.class_name }}</td>
+                        <td>
+                            <div class="tx text-sm">F: {{ student.father_name }}</div>
+                            <div class="soft text-xs">M: {{ student.mother_name or '-' }}</div>
+                        </td>
+                        <td>{{ student.gender }}</td>
+                        <td style="text-align: right;">
+                            <div class="flex items-center justify-end gap-3">
+                                <!-- EDIT BUTTON -->
+                                <button type="button" @click="openEditModal(`{{ student.student_id }}`, `{{ student.name }}`, `{{ student.roll_no }}`, `{{ student.class_name }}`, `{{ student.gender }}`, `{{ student.father_name }}`, `{{ student.mother_name or '' }}`, `{{ student.dob or '' }}`, `{{ student.address or '' }}`)" class="soft hover:text-accent transition-colors" title="Edit Student">
+                                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"></path>
+                                        <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                    </svg>
+                                </button>
+                                
+                                <!-- DELETE BUTTON -->
+                                <form method="POST" action="{{ url_for('delete_student', id=student.student_id) }}" onsubmit="return confirm('Are you sure you want to delete {{ student.name }}?\nThis will permanently remove all related records.');" style="display:inline;">
+                                    <button type="submit" class="soft hover:text-red-500 transition-colors" title="Delete Student" style="background: none; border: none; cursor: pointer;">
+                                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
+                                        </svg>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="soft" style="height:88px; text-align:center;">No students enrolled in this school yet.</td>
+                    </tr>
+                    {% endfor %}
+                    
+                    <tr id="no-match" x-cloak x-show="!hasVisibleRows()">
+                        <td colspan="6" class="soft" style="height:88px; text-align:center;">No student matches your search.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ADD ADMISSION MODAL -->
+    <div x-cloak x-show="modalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="modalOpen = false"></div>
+        <div class="reg relative z-10 w-full max-w-2xl p-6 md:p-8" style="border-top: 4px solid var(--accent); box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+            <div class="flex justify-between items-center mb-6 pb-4" style="border-bottom: 1px solid var(--rule);">
+                <h2 class="tx text-xl font-bold">New Admission Form</h2>
+                <button @click="modalOpen = false" class="soft hover:text-tx transition-colors" style="background:none; border:none; cursor:pointer;">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <form method="POST" action="/students/create" class="space-y-5">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div><label class="form-label">Student Name</label><input type="text" name="name" required class="form-input"></div>
+                    <div><label class="form-label">Roll No</label><input type="number" name="roll_no" required class="form-input"></div>
+                    <div>
+                        <label class="form-label">Class</label>
+                        <select name="class_name" required class="form-input">
+                            <option value="Class 1">Class 1</option><option value="Class 2">Class 2</option>
+                            <option value="Class 3">Class 3</option><option value="Class 4">Class 4</option><option value="Class 5">Class 5</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">Gender</label>
+                        <select name="gender" required class="form-input"><option value="Boy">Boy</option><option value="Girl">Girl</option></select>
+                    </div>
+                    <div><label class="form-label">Father's Name</label><input type="text" name="father_name" required class="form-input"></div>
+                    <div><label class="form-label">Mother's Name</label><input type="text" name="mother_name" class="form-input"></div>
+                    <div><label class="form-label">Date of Birth</label><input type="date" name="dob" class="form-input" style="color-scheme: dark;"></div>
+                    <div><label class="form-label">Address/Village</label><input type="text" name="address" class="form-input"></div>
+                </div>
+                <div class="mt-6 pt-5" style="border-top: 1px solid var(--rule);">
+                    <button type="submit" class="btn-primary w-full justify-center py-3 text-base">Save Admission Record</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- EDIT STUDENT MODAL (NEW) -->
+    <div x-cloak x-show="editModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="editModalOpen = false"></div>
+        <div class="reg relative z-10 w-full max-w-2xl p-6 md:p-8" style="border-top: 4px solid var(--accent); box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+            <div class="flex justify-between items-center mb-6 pb-4" style="border-bottom: 1px solid var(--rule);">
+                <h2 class="tx text-xl font-bold">Edit Student Record</h2>
+                <button @click="editModalOpen = false" class="soft hover:text-tx transition-colors" style="background:none; border:none; cursor:pointer;">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <form method="POST" action="/students/update" class="space-y-5">
+                <!-- Hidden input to pass student ID to backend -->
+                <input type="hidden" name="student_id" x-model="editForm.id">
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div><label class="form-label">Student Name</label><input type="text" name="name" x-model="editForm.name" required class="form-input"></div>
+                    <div><label class="form-label">Roll No</label><input type="number" name="roll_no" x-model="editForm.roll_no" required class="form-input"></div>
+                    <div>
+                        <label class="form-label">Class</label>
+                        <select name="class_name" x-model="editForm.class_name" required class="form-input">
+                            <option value="Class 1">Class 1</option><option value="Class 2">Class 2</option>
+                            <option value="Class 3">Class 3</option><option value="Class 4">Class 4</option><option value="Class 5">Class 5</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">Gender</label>
+                        <select name="gender" x-model="editForm.gender" required class="form-input"><option value="Boy">Boy</option><option value="Girl">Girl</option></select>
+                    </div>
+                    <div><label class="form-label">Father's Name</label><input type="text" name="father_name" x-model="editForm.father_name" required class="form-input"></div>
+                    <div><label class="form-label">Mother's Name</label><input type="text" name="mother_name" x-model="editForm.mother_name" class="form-input"></div>
+                    <div><label class="form-label">Date of Birth</label><input type="date" name="dob" x-model="editForm.dob" class="form-input" style="color-scheme: dark;"></div>
+                    <div><label class="form-label">Address/Village</label><input type="text" name="address" x-model="editForm.address" class="form-input"></div>
+                </div>
+                <div class="mt-6 pt-5" style="border-top: 1px solid var(--rule);">
+                    <button type="submit" class="btn-primary w-full justify-center py-3 text-base">Update Record</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Alpine.js & Theme Logic -->
+    <script>
+        function studentsApp() {
+            return {
+                modalOpen: false,
+                editModalOpen: false, 
+                currentClass: 'All', 
+                searchQuery: '',     
+                
+                // Form Data Object for Editing
+                editForm: {
+                    id: '', name: '', roll_no: '', class_name: '', gender: '', father_name: '', mother_name: '', dob: '', address: ''
+                },
+
+                // Function triggered when 'Edit' is clicked
+                openEditModal(id, name, roll, cls, gender, fname, mname, dob, address) {
+                    this.editForm = {
+                        id: id, name: name, roll_no: roll, class_name: cls, gender: gender,
+                        father_name: fname, mother_name: mname, dob: dob, address: address
+                    };
+                    this.editModalOpen = true;
+                },
+
+                matches(className, studentName) {
+                    if (this.searchQuery.trim() === '') {
+                        return this.currentClass === 'All' || className === this.currentClass;
+                    }
+                    return studentName.toLowerCase().includes(this.searchQuery.toLowerCase());
+                },
+
+                hasVisibleRows() {
+                    if (this.searchQuery.trim() === '') return true;
+                    const rows = document.querySelectorAll('.student-row');
+                    let visible = false;
+                    const query = this.searchQuery.toLowerCase();
+                    rows.forEach(r => {
+                        const nameAttr = r.getAttribute('x-show');
+                        if (nameAttr) {
+                            const nameMatch = nameAttr.match(/'([^']+)'\)$/);
+                            if (nameMatch && nameMatch[1].toLowerCase().includes(query)) visible = true;
+                        }
+                    });
+                    return visible;
+                }
+            }
+        }
+
+        (function () {
+            /* ---------- Auto Theme Sync ---------- */
+            function lum(c) { const m = c.match(/[\d.]+/g); if (!m) return null; if (m.length > 3 && parseFloat(m[3]) === 0) return null; return (0.299*m[0] + 0.587*m[1] + 0.114*m[2]) / 255; }
+            function syncTheme() {
+                let L = null;
+                [document.body, document.documentElement, document.querySelector('main')].forEach(el => {
+                    if (L === null && el) L = lum(getComputedStyle(el).backgroundColor);
+                });
+                if (L === null) { const t = lum(getComputedStyle(document.body).color); L = t === null ? 0 : 1 - t; }
+                const mode = L > 0.5 ? 'light' : 'dark';
+                if (document.documentElement.getAttribute('data-dash-mode') !== mode) {
+                    document.documentElement.setAttribute('data-dash-mode', mode);
+                    document.querySelectorAll('input[type="date"]').forEach(inp => inp.style.colorScheme = mode);
+                }
+            }
+            syncTheme();
+            const watch = { attributes: true, attributeFilter: ['class', 'style', 'data-theme'] };
+            new MutationObserver(syncTheme).observe(document.documentElement, watch);
+            new MutationObserver(syncTheme).observe(document.body, watch);
+            setInterval(syncTheme, 800);
+        })();
+    </script>
+</div>
+{% endblock %}

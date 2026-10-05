@@ -1,0 +1,391 @@
+{% extends "base.html" %}
+{% set active_page = 'dashboard' %}
+{% block page_title %}School Dashboard{% endblock %}
+
+{% block content %}
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap');
+
+    /* ---------- Theme tokens (auto-follow your Dark/Light toggle) ---------- */
+    :root {
+        --tx:#e8eaf2; --tx-soft:#9aa3bd; --line:rgba(255,255,255,.14);
+        --surface:rgba(255,255,255,.04); --hover:rgba(255,255,255,.06);
+        --accent:#8FA8E8; --margin:rgba(224,122,122,.75); --rule:rgba(255,255,255,.08);
+        --shadow:none;
+    }
+    html[data-dash-mode="light"] {
+        --tx:#1c2233; --tx-soft:#5a6280; --line:rgba(40,55,100,.18);
+        --surface:#ffffff; --hover:rgba(47,75,138,.07);
+        --accent:#2F4B8A; --margin:rgba(192,57,43,.6); --rule:rgba(47,75,138,.13);
+        --shadow:0 1px 2px rgba(30,40,90,.08);
+    }
+    .tx { color:var(--tx); } .soft { color:var(--tx-soft); }
+    .hand { font-family:'Kalam', cursive; }
+
+    /* hand-drawn wobble applied to every icon */
+    .rough { filter:url(#rough); }
+
+    /* ---------- Blackboard ---------- */
+    .board {
+        position:relative; color:#F1EEDF; font-family:'Kalam', cursive;
+        background:
+            radial-gradient(ellipse at 18% 12%, rgba(255,255,255,.08), transparent 55%),
+            radial-gradient(ellipse at 85% 92%, rgba(255,255,255,.05), transparent 50%),
+            #2A4A3E;
+        border:10px solid #8A6A45; border-radius:4px;
+        box-shadow: inset 0 0 0 2px rgba(0,0,0,.3), inset 0 0 50px rgba(0,0,0,.4), 0 2px 0 #6e5233;
+        display:grid; grid-template-columns:repeat(3,1fr); padding:26px 8px;
+    }
+    .board .cell { display:flex; align-items:center; gap:16px; padding:4px 24px; filter:url(#chalk); }
+    .board .cell + .cell { border-left:2px dashed rgba(241,238,223,.3); }
+    .board .lab { font-size:18px; opacity:.85; line-height:1.2; }
+    .board .num { font-size:48px; line-height:1.05; font-weight:700; }
+    .board .num.small { font-size:36px; }
+    .chalk-line { stroke:#F1EEDF; fill:none; stroke-width:2.3; stroke-linecap:round; stroke-linejoin:round; }
+    .chalk-yellow { stroke:#F2D675; }
+    .tray { position:relative; height:10px; margin:0 6px; background:#7A5C3A; border-radius:0 0 3px 3px; }
+    .chalk-piece { position:absolute; top:-5px; height:6px; border-radius:3px; background:#F1EEDF; }
+    @media (max-width:760px) {
+        .board { grid-template-columns:1fr; }
+        .board .cell + .cell { border-left:0; border-top:2px dashed rgba(241,238,223,.3); margin-top:14px; padding-top:18px; }
+    }
+
+    /* ---------- Register (table) ---------- */
+    .reg { background:var(--surface); border:1px solid var(--line); border-radius:6px; box-shadow:var(--shadow); }
+    .reg-head { display:flex; flex-wrap:wrap; gap:14px; align-items:center; justify-content:space-between;
+                padding:14px 20px; border-bottom:2px solid var(--accent); }
+    .reg table { width:100%; border-collapse:collapse; font-size:14px; }
+    .reg th { text-align:left; font-weight:600; padding:10px 16px; color:var(--tx-soft); border-bottom:1px solid var(--line); white-space:nowrap; }
+    .reg td { padding:0 16px; height:44px; border-bottom:1px solid var(--rule); color:var(--tx); }
+    .reg .roll { width:84px; border-right:2px solid var(--margin); font-variant-numeric:tabular-nums; color:var(--tx-soft); }
+    .reg tr.student-row { cursor:pointer; transition:background .12s; }
+    .reg tr.student-row:hover { background:var(--hover); }
+    .th-sort { cursor:pointer; user-select:none; }
+    .th-sort:hover { color:var(--accent); }
+    .tab { background:none; border:0; padding:6px 2px; margin-left:14px; color:var(--tx-soft); border-bottom:2px solid transparent; cursor:pointer; font-size:14px; }
+    .tab.active { color:var(--tx); border-bottom-color:var(--accent); font-weight:600; }
+    .srch { background:transparent; border:0; border-bottom:1px solid var(--line); padding:6px 4px; width:210px; color:var(--tx); font-size:14px; }
+    .srch::placeholder { color:var(--tx-soft); }
+    .srch:focus { border-bottom-color:var(--accent); outline:none; }
+    .g-boy { color:#3B6FD4; } .g-girl { color:#C2417A; }
+    html:not([data-dash-mode="light"]) .g-boy { color:#8FB3FF; }
+    html:not([data-dash-mode="light"]) .g-girl { color:#FF9CC6; }
+
+    /* ---------- Tally ---------- */
+    .tally-btn { width:100%; display:flex; align-items:center; gap:14px; padding:10px 8px; background:none; border:0; border-bottom:1px dashed var(--line);
+                 cursor:pointer; color:var(--tx); text-align:left; }
+    .tally-btn:hover { background:var(--hover); }
+    .tally-btn:last-child { border-bottom:0; }
+    .tally-svg { color:var(--tx); flex:1; min-height:34px; }
+
+    /* ---------- Notice slip ---------- */
+    .slip { position:relative; background:#FFF3BF; color:#3a3320; padding:22px 20px 18px; border-radius:2px;
+            transform:rotate(-1deg); box-shadow:0 2px 6px rgba(0,0,0,.18); }
+    .slip::before { content:""; position:absolute; top:-9px; left:50%; width:64px; height:18px; margin-left:-32px;
+                    background:rgba(210,205,180,.75); transform:rotate(2deg); }
+    .slip a { color:#7a3d00; text-decoration:underline; text-underline-offset:3px; font-weight:600; }
+
+    #toast { position:fixed; bottom:24px; right:24px; z-index:50; background:#2A4A3E; color:#F1EEDF; padding:10px 16px; border-radius:4px;
+             font-size:14px; box-shadow:0 4px 14px rgba(0,0,0,.3); opacity:0; transform:translateY(12px); transition:all .25s; pointer-events:none; }
+    #toast.show { opacity:1; transform:none; }
+
+    :focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+    @media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
+</style>
+
+<!-- Pencil-wobble + chalk filters (shared by all icons) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <filter id="rough" x="-10%" y="-10%" width="120%" height="120%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="4" result="n"/>
+        <feDisplacementMap in="SourceGraphic" in2="n" scale="2.4"/>
+    </filter>
+    <filter id="chalk" x="-5%" y="-5%" width="110%" height="110%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7" result="n"/>
+        <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+</svg>
+
+<div class="space-y-6">
+
+    <!-- TODAY STRIP -->
+    <section class="flex flex-wrap items-center justify-between gap-6">
+        <div>
+            <div id="date-hi" class="hand tx text-2xl font-bold leading-tight">&nbsp;</div>
+            <div id="date-en" class="soft text-sm mt-1">&nbsp;</div>
+            <button type="button" id="copy-btn" class="soft text-sm mt-3 underline underline-offset-4 hover:opacity-70" style="background:none;border:0;padding:0;cursor:pointer">Copy summary</button>
+        </div>
+
+        <!-- Wall clock -->
+        <div class="flex items-center gap-4">
+            <div class="text-right">
+                <div id="clock-digital" class="tx text-3xl font-semibold" style="font-variant-numeric:tabular-nums">--:--</div>
+                <div class="soft text-xs">Session 2026-2027</div>
+            </div>
+            <svg viewBox="0 0 64 64" width="76" height="76" class="rough tx" aria-hidden="true" style="color:var(--tx)">
+                <path d="M32 5c14.5-.3 26.6 11 26.9 26.3C59.3 46 47.5 59 32.4 59 17.7 59 5.2 47.2 5 32.4 4.9 17.6 16.8 5.2 32 5z" fill="var(--surface)" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/>
+                <path id="ticks" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d=""/>
+                <line id="h-hour" x1="32" y1="32" x2="32" y2="20" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+                <line id="h-min"  x1="32" y1="32" x2="32" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <line id="h-sec"  x1="32" y1="36" x2="32" y2="11" stroke="#C0392B" stroke-width="1.2" stroke-linecap="round"/>
+                <circle cx="32" cy="32" r="1.8" fill="currentColor"/>
+            </svg>
+        </div>
+    </section>
+
+    <!-- BLACKBOARD -->
+    <section aria-label="School at a glance">
+        <div class="board">
+            <div class="cell">
+                <svg viewBox="0 0 48 48" width="56" height="56" aria-hidden="true">
+                    <path class="chalk-line" d="M17 14c-3.4.2-5.3 3-5 6.2.3 3.1 2.6 5 5.3 4.8 2.9-.2 4.8-2.7 4.5-5.9-.3-3-2.4-5.2-4.8-5.1z"/>
+                    <path class="chalk-line" d="M6 40c.4-6.5 4.6-10 11-10 3.2 0 5.8 1 7.6 2.8"/>
+                    <path class="chalk-line" d="M32 10.5c-3 .3-4.7 2.9-4.4 5.7.3 2.9 2.4 4.6 4.9 4.4 2.6-.3 4.3-2.5 4-5.3-.3-2.7-2.3-4.9-4.5-4.8z"/>
+                    <path class="chalk-line" d="M26.5 36.5c1-4.7 4.2-7.3 8.6-7.2 4.4.1 7.4 3 7.9 9"/>
+                </svg>
+                <div><div class="lab">Total students</div><div class="num">{{ total_students|default(0) }}</div></div>
+            </div>
+            <div class="cell">
+                <svg viewBox="0 0 48 48" width="56" height="56" aria-hidden="true">
+                    <path class="chalk-line" d="M7 9.5c10-1 24-1.2 34 0 .6 8.5.5 16 0 23-10 1.2-24 1.3-34 .1-.7-7-.8-15 0-23.1z"/>
+                    <path class="chalk-line" d="M13 16c4-1 8 .5 12-.3M13 22c5-.8 9 .6 15-.2M13 28c3-.6 6 .4 8-.2"/>
+                    <path class="chalk-line" d="M5 38.5c12 .8 25 .8 38 0"/>
+                    <path class="chalk-line chalk-yellow" d="M30 35.8l5-.2"/>
+                </svg>
+                <div><div class="lab">Active classes</div><div class="num">{{ total_classes|default(0) }}</div></div>
+            </div>
+            <div class="cell">
+                <svg viewBox="0 0 48 48" width="56" height="56" aria-hidden="true">
+                    <path class="chalk-line" d="M8 12.5c10-1.2 22-1.1 32 0 .8 9 .8 17 0 26-10 1-22 1.1-32 0-.8-9-.8-17 0-26z"/>
+                    <path class="chalk-line" d="M8.5 20c10.3-.7 21.4-.6 31 0"/>
+                    <path class="chalk-line" d="M16 7.5v8M32 7.4v8.2"/>
+                    <path class="chalk-line" d="M15 27h.1M22 27h.1M29 27h.1M15 33h.1M22 33h.1" stroke-width="3.4"/>
+                    <path class="chalk-line chalk-yellow" d="M28 31.5l2.8 3 5-6"/>
+                </svg>
+                <div><div class="lab">Current session</div><div class="num small">2026-2027</div></div>
+            </div>
+        </div>
+        <div class="tray" aria-hidden="true">
+            <span class="chalk-piece" style="left:14%; width:22px; transform:rotate(-3deg)"></span>
+            <span class="chalk-piece" style="left:calc(14% + 30px); width:14px; background:#F2D675; transform:rotate(4deg)"></span>
+        </div>
+    </section>
+
+    <!-- REGISTER + SIDE -->
+    <section class="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
+
+        <div class="reg xl:col-span-2 overflow-hidden">
+            <div class="reg-head">
+                <div class="flex items-center gap-3">
+                    <svg viewBox="0 0 24 24" width="22" height="22" class="rough tx" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color:var(--tx)">
+                        <path d="M4 20l1-5L16.5 3.5a2 2 0 013 3L8 18l-4 2z"/><path d="M14.5 5.5l3 3"/>
+                    </svg>
+                    <h2 class="tx font-bold text-base">Recent admissions</h2>
+                    <span id="row-count" class="soft text-xs">0 students</span>
+                </div>
+                <div class="flex flex-wrap items-end gap-2">
+                    <input id="search" type="search" class="srch" placeholder="Search name, class or roll no" aria-label="Search students">
+                    <div role="tablist" aria-label="Filter by gender">
+                        <button type="button" class="tab active" data-filter="all">All</button>
+                        <button type="button" class="tab" data-filter="Boy">Boys</button>
+                        <button type="button" class="tab" data-filter="Girl">Girls</button>
+                    </div>
+                </div>
+            </div>
+
+            <div style="overflow-x:auto">
+                <table id="students-table">
+                    <thead>
+                        <tr>
+                            <th class="roll th-sort" data-sort="0" style="border-right:2px solid var(--margin)">Roll no <span class="arrow"></span></th>
+                            <th class="th-sort" data-sort="1">Student name <span class="arrow"></span></th>
+                            <th class="th-sort" data-sort="2">Class <span class="arrow"></span></th>
+                            <th style="text-align:right">Gender</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for student in recent_students %}
+                        <tr class="student-row" data-gender="{{ student.gender }}" title="Click to copy details">
+                            <td class="roll" data-val="{{ student.roll_no }}">{{ student.roll_no }}</td>
+                            <td style="font-weight:600">{{ student.name }}</td>
+                            <td>{{ student.class_name }}</td>
+                            <td style="text-align:right">
+                                {% if student.gender == 'Boy' %}<span class="g-boy">Boy</span>{% else %}<span class="g-girl">Girl</span>{% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="soft" style="height:88px; text-align:center">
+                                No students yet. <a href="/students" style="color:var(--accent); text-decoration:underline">Add your first student</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        <tr id="no-match" class="hidden">
+                            <td colspan="4" class="soft" style="height:88px; text-align:center">No student matches this search. Try another name or clear the filter.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="padding:12px 20px; text-align:right">
+                <a href="/students" class="text-sm hover:opacity-70" style="color:var(--accent); font-weight:600">View all students</a>
+            </div>
+        </div>
+
+        <div class="space-y-8">
+            <!-- Tally -->
+            <div class="reg" style="padding:18px 20px">
+                <h2 class="tx font-bold text-base">Boys and girls</h2>
+                <p class="soft text-xs mb-3">Counted from recent admissions. Select a row to filter the register.</p>
+                <button type="button" class="tally-btn" data-filter="Boy">
+                    <span class="w-12 text-sm">Boys</span><span id="tally-boys" class="tally-svg"></span><b id="count-boys" class="tx" style="min-width:24px;text-align:right">0</b>
+                </button>
+                <button type="button" class="tally-btn" data-filter="Girl">
+                    <span class="w-12 text-sm">Girls</span><span id="tally-girls" class="tally-svg"></span><b id="count-girls" class="tx" style="min-width:24px;text-align:right">0</b>
+                </button>
+            </div>
+
+            <!-- Notice slip -->
+            <div class="slip hand">
+                <div style="font-size:20px; font-weight:700">Notice</div>
+                <p style="font-size:16px; line-height:1.5; margin-top:4px">
+                    New admission? Add the child in the <a href="/students">Students Directory</a> and they will show up here.
+                </p>
+            </div>
+        </div>
+    </section>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+    /* ---------- Detect light/dark from the page (no self-trigger loop) ---------- */
+    function lum(c) { const m = c.match(/[\d.]+/g); if (!m) return null; if (m.length > 3 && parseFloat(m[3]) === 0) return null; return (0.299*m[0] + 0.587*m[1] + 0.114*m[2]) / 255; }
+    function syncTheme() {
+        let L = null;
+        [document.body, document.documentElement, document.querySelector('main')].forEach(el => {
+            if (L === null && el) L = lum(getComputedStyle(el).backgroundColor);
+        });
+        if (L === null) { const t = lum(getComputedStyle(document.body).color); L = t === null ? 0 : 1 - t; }
+        const mode = L > 0.5 ? 'light' : 'dark';
+        if (document.documentElement.getAttribute('data-dash-mode') !== mode) {
+            document.documentElement.setAttribute('data-dash-mode', mode);
+        }
+    }
+    syncTheme();
+    const watch = { attributes: true, attributeFilter: ['class', 'style', 'data-theme'] };
+    new MutationObserver(syncTheme).observe(document.documentElement, watch);
+    new MutationObserver(syncTheme).observe(document.body, watch);
+    setInterval(syncTheme, 800);
+
+    /* ---------- Date + wall clock ---------- */
+    (function drawTicks() {
+        let d = '';
+        for (let i = 0; i < 12; i++) {
+            const a = i * Math.PI / 6, r1 = i % 3 === 0 ? 22 : 25, r2 = 28.5;
+            d += 'M' + (32 + r1 * Math.sin(a)).toFixed(1) + ' ' + (32 - r1 * Math.cos(a)).toFixed(1) +
+                 'L' + (32 + r2 * Math.sin(a)).toFixed(1) + ' ' + (32 - r2 * Math.cos(a)).toFixed(1);
+        }
+        document.getElementById('ticks').setAttribute('d', d);
+    })();
+    const rot = (id, deg) => document.getElementById(id).setAttribute('transform', 'rotate(' + deg + ' 32 32)');
+    function tick() {
+        const d = new Date(), s = d.getSeconds(), m = d.getMinutes() + s / 60, h = (d.getHours() % 12) + m / 60;
+        rot('h-hour', h * 30); rot('h-min', m * 6); rot('h-sec', s * 6);
+        document.getElementById('clock-digital').textContent = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        document.getElementById('date-hi').textContent = d.toLocaleDateString('hi-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        document.getElementById('date-en').textContent = d.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    }
+    tick(); setInterval(tick, 1000);
+
+    /* ---------- Toast + copy ---------- */
+    const toast = document.getElementById('toast');
+    let timer;
+    function showToast(msg) {
+        toast.textContent = msg; toast.classList.add('show');
+        clearTimeout(timer); timer = setTimeout(() => toast.classList.remove('show'), 2200);
+    }
+    function copy(text, msg) {
+        const done = () => showToast(msg);
+        if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, done); else done();
+    }
+    document.getElementById('copy-btn').addEventListener('click', () => {
+        copy('School summary: {{ total_students }} students, {{ total_classes }} active classes, session 2026-2027.', 'Summary copied');
+    });
+
+    /* ---------- Register: search, filter, sort ---------- */
+    const tbody = document.querySelector('#students-table tbody');
+    const rows = Array.from(tbody.querySelectorAll('.student-row'));
+    const search = document.getElementById('search');
+    const tabs = document.querySelectorAll('.tab');
+    const noMatch = document.getElementById('no-match');
+    const countEl = document.getElementById('row-count');
+    let filter = 'all';
+
+    function apply() {
+        const q = search.value.trim().toLowerCase();
+        let n = 0;
+        rows.forEach(r => {
+            const ok = (filter === 'all' || r.dataset.gender === filter) && r.textContent.toLowerCase().includes(q);
+            r.classList.toggle('hidden', !ok);
+            if (ok) n++;
+        });
+        countEl.textContent = n + (n === 1 ? ' student' : ' students');
+        noMatch.classList.toggle('hidden', n > 0 || rows.length === 0);
+    }
+    function setFilter(f) {
+        filter = f;
+        tabs.forEach(t => t.classList.toggle('active', t.dataset.filter === f));
+        apply();
+    }
+    search.addEventListener('input', apply);
+    tabs.forEach(t => t.addEventListener('click', () => setFilter(t.dataset.filter)));
+    document.querySelectorAll('.tally-btn').forEach(b => b.addEventListener('click', () => {
+        setFilter(filter === b.dataset.filter ? 'all' : b.dataset.filter);
+    }));
+
+    const dir = {};
+    document.querySelectorAll('.th-sort').forEach(th => th.addEventListener('click', () => {
+        const i = parseInt(th.dataset.sort, 10);
+        dir[i] = !dir[i];
+        document.querySelectorAll('.th-sort .arrow').forEach(a => a.textContent = '');
+        th.querySelector('.arrow').textContent = dir[i] ? '↑' : '↓';
+        const val = r => {
+            const c = r.children[i];
+            return c.dataset.val !== undefined ? (parseFloat(c.dataset.val) || c.dataset.val) : c.textContent.trim().toLowerCase();
+        };
+        rows.sort((a, b) => { const x = val(a), y = val(b); return (x > y ? 1 : x < y ? -1 : 0) * (dir[i] ? 1 : -1); })
+            .forEach(r => tbody.insertBefore(r, noMatch));
+    }));
+
+    rows.forEach(r => r.addEventListener('click', () => {
+        const c = r.children;
+        copy(c[1].textContent.trim() + ', ' + c[2].textContent.trim() + ', Roll ' + c[0].textContent.trim(), 'Copied ' + c[1].textContent.trim());
+    }));
+
+    /* ---------- Hand-drawn tally marks ---------- */
+    const jit = (i) => (Math.abs(Math.sin(i * 12.9898) * 43758.5453) % 1) - 0.5;
+    function tally(n) {
+        const MAX = 40, shown = Math.min(n, MAX), groups = Math.ceil(shown / 5) || 1;
+        let d = '', k = 0;
+        for (let g = 0; g < groups; g++) {
+            const x0 = g * 36 + 4, inGroup = Math.min(5, shown - g * 5);
+            for (let j = 0; j < Math.min(inGroup, 4); j++, k++) {
+                const x = x0 + j * 7 + jit(k) * 1.6;
+                d += 'M' + x.toFixed(1) + ' ' + (4 + jit(k + 9) * 2).toFixed(1) + 'L' + (x + jit(k + 3) * 1.5).toFixed(1) + ' ' + (28 + jit(k + 5) * 2).toFixed(1);
+            }
+            if (inGroup === 5) { d += 'M' + (x0 - 3) + ' 23L' + (x0 + 31) + ' 8'; k++; }
+        }
+        const w = groups * 36 + 4;
+        return '<svg viewBox="0 0 ' + w + ' 32" height="32" width="' + w + '" class="rough" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="' + d + '"/></svg>';
+    }
+    const boys = rows.filter(r => r.dataset.gender === 'Boy').length, girls = rows.length - boys;
+    document.getElementById('count-boys').textContent = boys;
+    document.getElementById('count-girls').textContent = girls;
+    document.getElementById('tally-boys').innerHTML = boys ? tally(boys) : '';
+    document.getElementById('tally-girls').innerHTML = girls ? tally(girls) : '';
+
+    apply();
+})();
+</script>
+{% endblock %}

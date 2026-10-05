@@ -1,0 +1,372 @@
+{% extends "base.html" %}
+{% set active_page = 'ai_assistant' %}
+{% block page_title %}Smart Search{% endblock %}
+
+{% block content %}
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap');
+
+    /* ---------- Theme tokens ---------- */
+    :root {
+        --tx: #e8eaf2; --tx-soft: #9aa3bd; --line: rgba(255,255,255,.14);
+        --surface: rgba(255,255,255,.04); --hover: rgba(255,255,255,.06);
+        --accent: #8FA8E8; --margin: rgba(224,122,122,.75); --rule: rgba(255,255,255,.08);
+        --shadow: none;
+    }
+    html[data-dash-mode="light"] {
+        --tx: #1c2233; --tx-soft: #5a6280; --line: rgba(40,55,100,.18);
+        --surface: #ffffff; --hover: rgba(47,75,138,.07);
+        --accent: #2F4B8A; --margin: rgba(192,57,43,.6); --rule: rgba(47,75,138,.13);
+        --shadow: 0 1px 2px rgba(30,40,90,.08);
+    }
+    .tx { color: var(--tx); } .soft { color: var(--tx-soft); }
+    .hand { font-family: 'Kalam', cursive; }
+    .rough { filter: url(#rough); }
+
+    /* ---------- Blackboard (Search Area) ---------- */
+    .board {
+        position: relative; color: #F1EEDF; font-family: 'Kalam', cursive;
+        background: radial-gradient(ellipse at 18% 12%, rgba(255,255,255,.08), transparent 55%), radial-gradient(ellipse at 85% 92%, rgba(255,255,255,.05), transparent 50%), #2A4A3E;
+        border: 10px solid #8A6A45; border-radius: 4px;
+        box-shadow: inset 0 0 0 2px rgba(0,0,0,.3), inset 0 0 50px rgba(0,0,0,.4), 0 2px 0 #6e5233;
+        padding: 40px 30px; margin-bottom: 24px; text-align: center;
+    }
+    .chalk-search {
+        background: rgba(0,0,0,0.25); border: 2px dashed rgba(241,238,223,.4); color: #F1EEDF;
+        font-family: 'Kalam', cursive; font-size: 20px; padding: 12px 20px; border-radius: 8px; outline: none; width: 100%;
+        transition: border 0.2s;
+    }
+    .chalk-search::placeholder { color: rgba(241,238,223,.5); }
+    .chalk-search:focus { border-color: #F2D675; }
+
+    .tray { position: absolute; bottom: -10px; left: 0; right: 0; height: 10px; margin: 0 6px; background: #7A5C3A; border-radius: 0 0 3px 3px; }
+    .chalk-piece { position: absolute; top: -5px; height: 6px; border-radius: 3px; background: #F1EEDF; }
+
+    /* ---------- Register (Results Table) ---------- */
+    .reg { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; box-shadow: var(--shadow); }
+    .reg-head { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 2px solid var(--accent); }
+    
+    .reg table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .reg th { text-align: left; font-weight: 600; padding: 12px 16px; color: var(--tx-soft); border-bottom: 1px solid var(--line); white-space: nowrap; }
+    .reg td { padding: 12px 16px; border-bottom: 1px solid var(--rule); color: var(--tx); }
+    .reg tr.student-row { transition: background .12s; }
+    .reg tr.student-row:hover { background: var(--hover); }
+
+    /* ---------- Buttons & Chips ---------- */
+    .btn-primary { background: #F2D675; color: #2A4A3E; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: bold; font-family: 'Inter', sans-serif; transition: opacity 0.2s; display: inline-flex; align-items: center; gap: 8px; justify-content: center; }
+    .btn-primary:hover { opacity: 0.9; transform: scale(1.02); }
+    .btn-primary:disabled { opacity: 0.8; transform: none; cursor: not-allowed; }
+
+    .btn-secondary { background: transparent; color: var(--tx); border: 1px solid var(--line); padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; font-size: 13px; }
+    .btn-secondary:hover { background: var(--hover); border-color: var(--tx-soft); }
+
+    .chip { font-family: 'Kalam', cursive; font-size: 16px; color: rgba(241,238,223,.8); background: rgba(0,0,0,0.2); border: 1px dashed rgba(241,238,223,.3); padding: 6px 16px; border-radius: 20px; cursor: pointer; transition: all 0.2s; }
+    .chip:hover { border-color: #F2D675; color: #F2D675; transform: translateY(-2px); }
+
+    /* ---------- CUSTOM SPINNERS (GUARANTEED TO WORK) ---------- */
+    @keyframes custom-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    @keyframes custom-spin-reverse { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
+    
+    .spin-fast { animation: custom-spin 1s linear infinite; }
+    .spin-slow { animation: custom-spin 1.5s linear infinite; }
+    .spin-reverse { animation: custom-spin-reverse 1.2s linear infinite; }
+
+    /* Mic Sonar Effect */
+    .sonar-ring { position: absolute; inset: 0; border-radius: 50%; border: 2px solid rgba(239,68,68,0.6); animation: sonar 1.6s ease-out infinite; pointer-events: none; }
+    .sonar-ring.delay { animation-delay: 0.5s; }
+    @keyframes sonar { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(1.9); opacity: 0; } }
+
+    [x-cloak] { display: none !important; }
+</style>
+
+<!-- SVG Filters -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <filter id="rough" x="-10%" y="-10%" width="120%" height="120%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="4" result="n"/>
+        <feDisplacementMap in="SourceGraphic" in2="n" scale="2.4"/>
+    </filter>
+</svg>
+
+<div class="max-w-6xl mx-auto pb-16 space-y-6" x-data="aiSearch()" @keydown.window="if ($event.key === '/' && document.activeElement.tagName !== 'INPUT') { $event.preventDefault();$refs.searchInput.focus(); }">
+
+    <!-- BLACKBOARD SEARCH AREA -->
+    <div class="board">
+        <svg viewBox="0 0 24 24" width="48" height="48" class="rough mx-auto mb-4" fill="none" stroke="#F2D675" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+        </svg>
+        <h1 class="text-4xl font-extrabold tracking-wide mb-2">Ask Database Anything</h1>
+        <p class="opacity-80 text-lg mb-8">Type or speak in Hindi / English to instantly fetch records.</p>
+
+        <!-- Search Input & Buttons -->
+        <div class="flex flex-col md:flex-row items-center gap-4 max-w-4xl mx-auto relative">
+            <div class="w-full relative flex items-center">
+                <input type="text" x-ref="searchInput" x-model="query" @keydown.enter="searchDB()" placeholder="e.g. Class 5 ke bacche dikhao..." class="chalk-search pl-4 pr-14" :disabled="isLoading">
+                
+                <!-- Mic Button -->
+                <button @click="toggleVoiceSearch()" type="button" x-ref="micButton"
+                    :class="isListening ? 'text-red-400' : 'text-[#F1EEDF] opacity-70 hover:opacity-100 hover:text-[#F2D675]'"
+                    class="absolute right-3 p-2 rounded-full transition-all flex items-center justify-center shrink-0" title="Speak in Hindi or English" :disabled="isLoading">
+                    <template x-if="isListening"><span class="sonar-ring"></span></template>
+                    <template x-if="isListening"><span class="sonar-ring delay"></span></template>
+                    <svg class="w-6 h-6 relative rough" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+                </button>
+            </div>
+
+            <!-- Search / Processing Button -->
+            <button @click="searchDB()" :disabled="isLoading" class="btn-primary w-full md:w-auto">
+                <span x-show="!isLoading" class="flex items-center gap-2">Search <svg class="w-5 h-5 rough" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg></span>
+                
+                <!-- Button Spinner when loading -->
+                <span x-cloak x-show="isLoading" class="flex items-center gap-2" style="display: none;">
+                    <svg class="spin-fast h-5 w-5" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Processing...
+                </span>
+            </button>
+        </div>
+
+        <!-- Examples -->
+        <div class="flex flex-wrap justify-center gap-3 mt-8">
+            <template x-for="example in examples" :key="example">
+                <button @click="setExampleQuery(example)" type="button" class="chip" :disabled="isLoading">
+                    <span x-text="example"></span>
+                </button>
+            </template>
+        </div>
+
+        <div class="tray" aria-hidden="true">
+            <span class="chalk-piece" style="left:20%; width:28px; transform:rotate(-4deg)"></span>
+            <span class="chalk-piece" style="left:75%; width:18px; background:#F2D675; transform:rotate(6deg)"></span>
+        </div>
+    </div>
+
+    <!-- LISTENING STATUS -->
+    <div x-cloak x-show="isListening" class="text-center mb-6" style="display: none;">
+        <span class="inline-flex items-center gap-2 bg-red-500/10 border border-red-500/30 text-red-500 px-4 py-2 rounded-full text-sm font-bold tracking-wide" style="font-family: 'Inter', sans-serif;">
+            <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping"></span>
+            <span x-text="query ? query : 'Listening... (Speak in Hindi or English)'"></span>
+        </span>
+    </div>
+
+    <!-- ERROR MESSAGE -->
+    <div x-cloak x-show="error" class="bg-red-500/10 border border-red-500/30 text-red-500 p-4 rounded-xl mb-6 flex items-center gap-3 font-semibold" style="font-family: 'Inter', sans-serif;" style="display: none;">
+        <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <span x-text="error"></span>
+    </div>
+
+    <!-- BIG LOADING SPINNER STATE -->
+    <div x-cloak x-show="isLoading" class="reg p-12 text-center shadow-xl mb-6" style="display: none;">
+        <div class="inline-block relative w-16 h-16 mb-6">
+            <!-- Outer Ring (Gold) -->
+            <div class="absolute inset-0 rounded-full border-4 border-transparent border-t-[#F2D675] border-l-[#F2D675] spin-slow"></div>
+            <!-- Inner Ring (Green) -->
+            <div class="absolute inset-2 rounded-full border-4 border-transparent border-b-[#2ECC71] border-r-[#2ECC71] spin-reverse"></div>
+        </div>
+        <h3 class="tx font-bold text-xl mb-2" style="font-family: 'Inter', sans-serif;">AI is fetching records...</h3>
+        <p class="soft text-base" style="font-family: 'Inter', sans-serif;">Please wait while we scan the database.</p>
+    </div>
+
+    <!-- RESULTS SECTION (Register Style) -->
+    <div x-cloak x-show="results !== null && !error && !isLoading" class="reg overflow-hidden shadow-2xl" style="display: none;">
+        
+        <div class="reg-head bg-white/5">
+            <div class="flex items-center gap-3">
+                <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+                <h3 class="tx font-bold text-base" style="font-family: 'Inter', sans-serif;">Query Results</h3>
+                <span class="text-xs soft border border-[var(--line)] px-2.5 py-1 rounded-md ml-2 font-medium" x-text="`${data.length} records found`" style="font-family: 'Inter', sans-serif;"></span>
+            </div>
+            <div class="flex items-center gap-3">
+                <button @click="copySql()" class="btn-secondary" title="Click to copy SQL">
+                    <span class="font-mono text-xs max-w-[150px] md:max-w-[300px] truncate" x-text="sqlQuery"></span>
+                    <svg x-show="!copied" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                    <svg x-show="copied" style="display:none" class="w-4 h-4 shrink-0 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                </button>
+                <button @click="exportCSV()" x-show="data.length > 0" class="btn-secondary">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"></path></svg>
+                    Export CSV
+                </button>
+            </div>
+        </div>
+
+        <div style="overflow-x:auto;">
+            <table style="font-family: 'Inter', sans-serif;">
+                <thead>
+                    <tr class="bg-black/10">
+                        <template x-for="col in columns" :key="col">
+                            <th x-text="col.replace(/_/g, ' ').toUpperCase()"></th>
+                        </template>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="(row, index) in data" :key="index">
+                        <tr class="student-row">
+                            <template x-for="col in columns" :key="col">
+                                <td x-text="row[col] !== null ? row[col] : '-'" class="font-medium"></td>
+                            </template>
+                        </tr>
+                    </template>
+                    <tr x-show="data.length === 0">
+                        <td :colspan="columns.length || 1" class="p-12 text-center soft">
+                            <svg class="w-12 h-12 mx-auto mb-3 opacity-50 rough" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <p class="text-base font-bold tx">No records found matching your criteria.</p>
+                            <p class="text-sm mt-1">Try rephrasing, or pick one of the example searches above.</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+<script>
+    function aiSearch() {
+        return {
+            query: '',
+            isLoading: false,
+            isListening: false,
+            error: null,
+            results: null,
+            columns: [],
+            data: [],
+            sqlQuery: '',
+            copied: false,
+            recognition: null,
+            examples: [
+                'Class 5 ke bacche',
+                'Girls in Class 3',
+                'Passed students in Half Yearly',
+                'Uniform pending status'
+            ],
+
+            setExampleQuery(text) {
+                this.query = text;
+                this.searchDB();
+            },
+
+            toggleVoiceSearch() {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (!SpeechRecognition) {
+                    this.error = 'Voice search is not supported in this browser. Please use Google Chrome.';
+                    return;
+                }
+                if (this.isListening && this.recognition) {
+                    this.recognition.stop();
+                    return;
+                }
+
+                const recognition = new SpeechRecognition();
+                recognition.lang = 'hi-IN';
+                recognition.interimResults = true;
+                recognition.maxAlternatives = 1;
+                this.recognition = recognition;
+
+                recognition.onstart = () => {
+                    this.isListening = true;
+                    this.error = null;
+                    this.query = '';
+                };
+                recognition.onresult = (event) => {
+                    const result = event.results[0];
+                    this.query = result[0].transcript;
+                    if (result.isFinal) {
+                        this.isListening = false;
+                        this.searchDB();
+                    }
+                };
+                recognition.onerror = () => {
+                    this.error = 'Voice recognition error. Please try again.';
+                    this.isListening = false;
+                };
+                recognition.onend = () => {
+                    this.isListening = false;
+                };
+                recognition.start();
+            },
+
+            async searchDB() {
+                if (!this.query.trim()) return;
+
+                this.isLoading = true;
+                this.error = null;
+                this.results = null;
+
+                try {
+                    const res = await fetch('/api/ai-search', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ query: this.query })
+                    });
+
+                    const responseData = await res.json();
+
+                    if (!res.ok || responseData.error) {
+                        this.error = responseData.error || 'Something went wrong processing the AI Query.';
+                        this.results = null;
+                    } else {
+                        this.columns = responseData.columns;
+                        this.data = responseData.data;
+                        this.sqlQuery = responseData.sql_used;
+                        this.results = true;
+                    }
+                } catch (err) {
+                    this.error = 'Failed to connect to the server. Check your network.';
+                } finally {
+                    this.isLoading = false;
+                }
+            },
+
+            copySql() {
+                if (!this.sqlQuery) return;
+                navigator.clipboard.writeText(this.sqlQuery).then(() => {
+                    this.copied = true;
+                    setTimeout(() => { this.copied = false; }, 2000);
+                });
+            },
+
+            exportCSV() {
+                if (!this.data.length) return;
+                const header = this.columns.join(',');
+                const rows = this.data.map(row =>
+                    this.columns.map(col => {
+                        const val = row[col] !== null && row[col] !== undefined ? String(row[col]) : '';
+                        return '"' + val.replace(/"/g, '""') + '"';
+                    }).join(',')
+                );
+                const csv = [header, ...rows].join('\n');
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'smart-search-results.csv';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }
+        }
+    }
+
+    (function () {
+        function lum(c) { const m = c.match(/[\d.]+/g); if (!m) return null; if (m.length > 3 && parseFloat(m[3]) === 0) return null; return (0.299*m[0] + 0.587*m[1] + 0.114*m[2]) / 255; }
+        function syncTheme() {
+            let L = null;
+            [document.body, document.documentElement, document.querySelector('main')].forEach(el => {
+                if (L === null && el) L = lum(getComputedStyle(el).backgroundColor);
+            });
+            if (L === null) { const t = lum(getComputedStyle(document.body).color); L = t === null ? 0 : 1 - t; }
+            const mode = L > 0.5 ? 'light' : 'dark';
+            if (document.documentElement.getAttribute('data-dash-mode') !== mode) {
+                document.documentElement.setAttribute('data-dash-mode', mode);
+            }
+        }
+        syncTheme();
+        const watch = { attributes: true, attributeFilter: ['class', 'style', 'data-theme'] };
+        new MutationObserver(syncTheme).observe(document.documentElement, watch);
+        new MutationObserver(syncTheme).observe(document.body, watch);
+        setInterval(syncTheme, 800);
+    })();
+</script>
+{% endblock %}

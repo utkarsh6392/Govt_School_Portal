@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en" :class="{ 'dark': darkMode }" x-data="{ darkMode: localStorage.getItem('darkMode') === 'true' }" x-init="$watch('darkMode', val => localStorage.setItem('darkMode', val))">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block page_title %}UP Govt School Portal{% endblock %}</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Plus Jakarta Sans', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Base Colors & Typography */
+        body { font-family: 'Inter', sans-serif; transition: background-color 0.3s ease, color 0.3s ease; }
+        
+        /* Dark Theme Default */
+        body { background-color: #0B0F19; color: #ffffff; }
+        .glass { background: rgba(255, 255, 255, 0.02); backdrop-filter: blur(10px); }
+
+        /* Crisp, Eye-Friendly Soft Light Mode Overrides */
+        html:not(.dark) body { background-color: #f1f5f9; color: #0f172a; }
+        html:not(.dark) .glass { background: rgba(255, 255, 255, 0.95); border-color: rgba(0, 0, 0, 0.1) !important; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        html:not(.dark) aside { background: #e2e8f0 !important; }
+        html:not(.dark) header { background: #e2e8f0 !important; }
+        
+        /* Force table text to be dark and visible in light mode */
+        html:not(.dark) table td, html:not(.dark) table th { color: #0f172a !important; }
+        html:not(.dark) tbody tr { color: #0f172a !important; }
+        
+        html:not(.dark) h1, html:not(.dark) h2, html:not(.dark) h3, html:not(.dark) span:not(.text-indigo-500):not(.text-purple-600), html:not(.dark) p { color: inherit; }
+        html:not(.dark) .text-\[\#8891AC\] { color: #475569 !important; }
+        
+        /* Hide Sidebar and Header during Print */
+        @media print {
+            .print\:hidden { display: none !important; }
+            main { margin-left: 0 !important; padding: 0 !important; }
+            body { background: white !important; color: black !important; }
+        }
+        
+        /* Active Sidebar Link Style (Standard Links) */
+        .nav-link.active {
+            background: rgba(99, 102, 241, 0.15);
+            color: #818cf8; /* indigo-400 */
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.1);
+        }
+        html:not(.dark) .nav-link.active {
+            background: rgba(99, 102, 241, 0.15);
+            color: #4f46e5;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex overflow-x-hidden" x-data="{ sidebarOpen: false }">
+
+    <!-- MOBILE OVERLAY -->
+    <div x-show="sidebarOpen" x-transition.opacity @click="sidebarOpen = false" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 md:hidden"></div>
+
+    <!-- SIDEBAR -->
+    <aside class="w-64 fixed inset-y-0 left-0 glass border-r border-white/10 dark:border-white/10 flex flex-col print:hidden z-50 transform transition-transform duration-300 md:translate-x-0"
+           :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'">
+        
+        <!-- Brand / Logo Section -->
+        <div class="h-24 flex items-center px-5 gap-3.5 border-b border-white/10 dark:border-white/10 pt-4 relative">
+            <button @click="sidebarOpen = false" class="absolute top-4 right-4 md:hidden text-slate-500 dark:text-slate-400 hover:text-red-500">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            <div class="w-16 h-16 rounded-full bg-white flex items-center justify-center shadow-md shrink-0 border border-slate-300 overflow-hidden">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="UPMSP Logo" class="w-full h-full object-cover scale-[1.7] transform">
+            </div>
+            <div>
+                <h1 class="text-sm font-display font-bold tracking-tight dark:text-white text-slate-900 leading-tight">UP Shiksha Parishad</h1>
+                <p class="text-[10px] text-indigo-500 dark:text-indigo-400 font-semibold uppercase tracking-wider mt-0.5">Govt of UP</p>
+            </div>
+        </div>
+        
+        <!-- Navigation Links -->
+        <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+            
+            <!-- 1. Dashboard -->
+            <a href="/" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {% if active_page == 'dashboard' %}active{% else %}text-[#8891AC] dark:hover:bg-white/5 hover:bg-slate-300/60 dark:hover:text-white hover:text-slate-900 border border-transparent{% endif %}">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                <span class="font-medium text-sm">Dashboard</span>
+            </a>
+
+            <!-- 2. Students Directory -->
+            <a href="/students" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {% if active_page == 'students' %}active{% else %}text-[#8891AC] dark:hover:bg-white/5 hover:bg-slate-300/60 dark:hover:text-white hover:text-slate-900 border border-transparent{% endif %}">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                <span class="font-medium text-sm">Students Directory</span>
+            </a>
+
+            <!-- 3. Monthly Attendance -->
+            <a href="/attendance" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {% if active_page == 'attendance' %}active{% else %}text-[#8891AC] dark:hover:bg-white/5 hover:bg-slate-300/60 dark:hover:text-white hover:text-slate-900 border border-transparent{% endif %}">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                <span class="font-medium text-sm">Monthly Attendance</span>
+            </a>
+
+            <!-- 4. Exam Results -->
+            <a href="/results" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {% if active_page == 'results' %}active{% else %}text-[#8891AC] dark:hover:bg-white/5 hover:bg-slate-300/60 dark:hover:text-white hover:text-slate-900 border border-transparent{% endif %}">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                <span class="font-medium text-sm">Exam Results</span>
+            </a>
+
+            <!-- 5. Govt Materials -->
+            <a href="/distribution" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {% if active_page == 'distribution' %}active{% else %}text-[#8891AC] dark:hover:bg-white/5 hover:bg-slate-300/60 dark:hover:text-white hover:text-slate-900 border border-transparent{% endif %}">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                <span class="font-medium text-sm">Govt Materials</span>
+            </a>
+
+            <!-- Divider Line -->
+            <div class="my-4 border-t border-white/10 dark:border-white/10"></div>
+
+            <!-- 6. Visual Analytics -->
+            <a href="/analytics" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {% if active_page == 'analytics' %}active{% else %}text-[#8891AC] dark:hover:bg-white/5 hover:bg-slate-300/60 dark:hover:text-white hover:text-slate-900 border border-transparent{% endif %}">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path></svg>
+                <span class="font-medium text-sm">Visual Analytics</span>
+            </a>
+
+            <!-- 7. Student Promotion -->
+            <a href="/promotion" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {% if active_page == 'promotion' %}active{% else %}text-[#8891AC] dark:hover:bg-white/5 hover:bg-slate-300/60 dark:hover:text-white hover:text-slate-900 border border-transparent{% endif %}">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                <span class="font-medium text-sm">Student Promotion</span>
+            </a>
+
+            <!-- 8. Smart AI Query (Premium Badge Link) -->
+            <a href="/ai-assistant" class="group relative flex items-center justify-between px-4 py-3.5 rounded-xl transition-all duration-500 overflow-hidden mt-6
+                {% if active_page == 'ai_assistant' %} 
+                    bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 shadow-[0_0_20px_rgba(139,92,246,0.4)] border border-white/20 
+                {% else %} 
+                    bg-indigo-900/10 dark:hover:bg-indigo-900/30 hover:bg-slate-300/60 border border-indigo-500/30 hover:border-purple-500/50 shadow-[0_0_10px_rgba(99,102,241,0.05)]
+                {% endif %}">
+                
+                <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out"></div>
+
+                <div class="flex items-center gap-3 relative z-10">
+                    <div class="relative flex items-center justify-center p-2 rounded-lg transition-colors
+                        {% if active_page == 'ai_assistant' %} bg-white/25 {% else %} bg-indigo-500/20 group-hover:bg-purple-500/30 {% endif %}">
+                        <svg class="w-5 h-5 shrink-0 {% if active_page == 'ai_assistant' %} text-white {% else %} text-indigo-400 group-hover:text-purple-300 {% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+                        </svg>
+                    </div>
+                    
+                    <span class="font-bold text-sm tracking-wide transition-all
+                        {% if active_page == 'ai_assistant' %} text-white 
+                        {% else %} text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-300 dark:to-purple-300 {% endif %}">
+                        Smart AI Query
+                    </span>
+                </div>
+
+                <div class="relative z-10">
+                    <span class="px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-colors
+                        {% if active_page == 'ai_assistant' %} bg-white/25 text-white 
+                        {% else %} bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/30 {% endif %}">
+                        <span class="w-1.5 h-1.5 rounded-full animate-pulse {% if active_page == 'ai_assistant' %} bg-white {% else %} bg-purple-500 {% endif %}"></span>
+                        BETA
+                    </span>
+                </div>
+            </a>
+        </nav>
+
+        <!-- THEME TOGGLE BUTTON -->
+        <div class="p-4 border-t border-white/10 dark:border-white/10">
+            <button @click="darkMode = !darkMode" class="w-full py-3 px-4 rounded-xl border transition-all flex items-center justify-center gap-3 dark:bg-slate-800/60 dark:border-slate-700 text-amber-400 dark:hover:bg-slate-700 bg-slate-200 border-slate-300 text-slate-800 hover:bg-slate-300 shadow-sm text-xs font-semibold">
+                <svg x-show="darkMode" class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                <svg x-show="!darkMode" class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                <span x-text="darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'" :class="darkMode ? 'text-slate-200 font-medium' : 'text-slate-800 font-semibold'"></span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="flex-1 flex flex-col min-h-screen transition-all duration-300 md:ml-64 w-full">
+        
+        <!-- TOP HEADER -->
+        <header class="h-20 glass border-b border-white/10 dark:border-white/10 flex items-center justify-between px-4 md:px-10 print:hidden sticky top-0 z-30 transition-colors duration-300">
+            <div class="flex items-center gap-3 md:gap-0">
+                <!-- MOBILE HAMBURGER -->
+                <button @click="sidebarOpen = !sidebarOpen" class="md:hidden p-2.5 rounded-xl bg-slate-200 dark:bg-white/5 text-slate-700 dark:text-white hover:bg-slate-300 dark:hover:bg-white/10 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                </button>
+                <h2 class="text-lg md:text-xl font-display font-bold dark:text-white text-slate-900 truncate">{{ self.page_title() }}</h2>
+            </div>
+            
+            <div class="flex items-center gap-3 md:gap-5">
+                {% if current_school %}
+                <div class="text-right hidden sm:block">
+                    <p class="text-sm font-bold dark:text-white text-slate-900">{{ current_school.name }}</p>
+                    <p class="text-xs text-[#8891AC]">Code: {{ current_school.code }}</p>
+                </div>
+                
+                <!-- LOGOUT BUTTON -->
+                <a href="/logout" class="group flex items-center gap-2 bg-red-500/10 hover:bg-red-500 border border-red-500/20 hover:border-red-500 text-red-500 hover:text-white px-3 md:px-4 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-semibold transition-all shadow-sm">
+                    <svg class="w-4 h-4 shrink-0 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                    <span class="hidden md:inline">Logout</span>
+                </a>
+                {% endif %}
+            </div>
+        </header>
+
+        <!-- PAGE SPECIFIC CONTENT -->
+        <main class="p-4 md:p-10 flex-1 w-full max-w-[100vw] overflow-x-hidden">
+            {% block content %}{% endblock %}
+        </main>
+    </main>
+
+</body>
+</html>

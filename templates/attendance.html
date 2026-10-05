@@ -1,0 +1,392 @@
+{% extends "base.html" %}
+{% set active_page = 'attendance' %}
+{% block page_title %}Monthly Attendance Register{% endblock %}
+
+{% block content %}
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap');
+
+    /* ---------- Theme tokens ---------- */
+    :root {
+        --tx: #e8eaf2; --tx-soft: #9aa3bd; --line: rgba(255,255,255,.14);
+        --surface: rgba(255,255,255,.04); --hover: rgba(255,255,255,.06);
+        --accent: #8FA8E8; --margin: rgba(224,122,122,.75); --rule: rgba(255,255,255,.08);
+        --shadow: none;
+    }
+    html[data-dash-mode="light"] {
+        --tx: #1c2233; --tx-soft: #5a6280; --line: rgba(40,55,100,.18);
+        --surface: #ffffff; --hover: rgba(47,75,138,.07);
+        --accent: #2F4B8A; --margin: rgba(192,57,43,.6); --rule: rgba(47,75,138,.13);
+        --shadow: 0 1px 2px rgba(30,40,90,.08);
+    }
+    .tx { color: var(--tx); } .soft { color: var(--tx-soft); }
+    .hand { font-family: 'Kalam', cursive; }
+
+    .rough { filter: url(#rough); }
+
+    /* ---------- Blackboard (Added for Filter Bar) ---------- */
+    .board {
+        position: relative; color: #F1EEDF; font-family: 'Kalam', cursive;
+        background:
+            radial-gradient(ellipse at 18% 12%, rgba(255,255,255,.08), transparent 55%),
+            radial-gradient(ellipse at 85% 92%, rgba(255,255,255,.05), transparent 50%),
+            #2A4A3E;
+        border: 10px solid #8A6A45; border-radius: 4px;
+        box-shadow: inset 0 0 0 2px rgba(0,0,0,.3), inset 0 0 50px rgba(0,0,0,.4), 0 2px 0 #6e5233;
+        padding: 20px 24px;
+        margin-bottom: 24px;
+        display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 20px;
+    }
+    .board .lab { font-size: 18px; opacity: .9; letter-spacing: 0.5px; }
+    .board select {
+        background: rgba(0,0,0,0.25); border: 2px dashed rgba(241,238,223,.4); color: #F1EEDF;
+        font-family: inherit; font-size: 18px; padding: 4px 16px; border-radius: 6px; outline: none; cursor: pointer;
+        transition: border 0.2s;
+    }
+    .board select:focus { border-color: #F2D675; }
+    .board select option { background: #2A4A3E; color: #F1EEDF; font-family: 'Inter', sans-serif; }
+    .tray { position: absolute; bottom: -10px; left: 0; right: 0; height: 10px; margin: 0 6px; background: #7A5C3A; border-radius: 0 0 3px 3px; }
+    .chalk-piece { position: absolute; top: -5px; height: 6px; border-radius: 3px; background: #F1EEDF; }
+
+    /* ---------- Register (table) ---------- */
+    .reg { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; box-shadow: var(--shadow); }
+    .reg-head { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between;
+                padding: 14px 20px; border-bottom: 2px solid var(--accent); }
+    
+    .reg table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .reg th { text-align: left; font-weight: 600; padding: 10px 16px; color: var(--tx-soft); border-bottom: 1px solid var(--line); white-space: nowrap; }
+    .reg td { padding: 0 16px; height: 50px; border-bottom: 1px solid var(--rule); color: var(--tx); }
+    .reg .roll { width: 84px; border-right: 2px solid var(--margin); font-variant-numeric: tabular-nums; color: var(--tx-soft); }
+    .reg tr.student-row { transition: background .12s; }
+    .reg tr.student-row:hover { background: var(--hover); }
+    
+    .att-input { background: transparent; border: 0; border-bottom: 1px dashed var(--line); color: var(--tx); font-size: 15px; width: 60px; text-align: center; outline: none; font-weight: 600; transition: border 0.2s; }
+    .att-input:focus { border-bottom: 2px solid var(--accent); }
+    .att-input::placeholder { color: var(--tx-soft); font-weight: 400; opacity: 0.5; }
+
+    /* ---------- Buttons & Slip ---------- */
+    .btn-primary { background: var(--accent); color: #fff; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: 600; transition: opacity 0.2s; }
+    html[data-dash-mode="light"] .btn-primary { color: #fff; }
+    .btn-primary:hover { opacity: 0.85; }
+
+    .slip { position: relative; background: #FFF3BF; color: #3a3320; padding: 22px 20px 18px; border-radius: 2px;
+            transform: rotate(-1deg); box-shadow: 0 2px 6px rgba(0,0,0,.18); }
+    .slip::before { content: ""; position: absolute; top: -9px; left: 50%; width: 64px; height: 18px; margin-left: -32px;
+                    background: rgba(210,205,180,.75); transform: rotate(2deg); }
+
+    /* ---------- Toast Notification & Animations ---------- */
+    #toast { position: fixed; bottom: 24px; right: 24px; z-index: 50; background: #2A4A3E; color: #F1EEDF; padding: 10px 16px; border-radius: 4px;
+             font-size: 14px; box-shadow: 0 4px 14px rgba(0,0,0,.3); opacity: 0; transform: translateY(12px); transition: all .25s; pointer-events: none; }
+    #toast.show { opacity: 1; transform: none; }
+    
+    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(143,168,232, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(143,168,232, 0); } 100% { box-shadow: 0 0 0 0 rgba(143,168,232, 0); } }
+    .mic-active { animation: pulse 1.5s infinite; background: var(--accent) !important; color: white !important; border-color: transparent !important; }
+</style>
+
+<!-- Pencil-wobble SVG filters -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <filter id="rough" x="-10%" y="-10%" width="120%" height="120%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="4" result="n"/>
+        <feDisplacementMap in="SourceGraphic" in2="n" scale="2.4"/>
+    </filter>
+</svg>
+
+<div>
+
+    <!-- FILTER BAR (Now designed as Blackboard) -->
+    <form method="GET" action="/attendance" class="board">
+        <div class="flex flex-wrap items-center gap-6 md:gap-10">
+            <div class="flex items-center gap-3">
+                <label class="lab">Class:</label>
+                <select name="class_name" onchange="this.form.submit()">
+                    {% for cls in ['Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5'] %}
+                    <option value="{{ cls }}" {% if selected_class == cls %}selected{% endif %}>{{ cls }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Separator Line (visible on md screens) -->
+            <div class="hidden md:block w-px h-8 bg-white/20" style="border-left: 2px dashed rgba(241,238,223,.3);"></div>
+            
+            <div class="flex items-center gap-3">
+                <label class="lab">Month:</label>
+                <select name="month_name" onchange="this.form.submit()">
+                    {% for m in ['April', 'May', 'July', 'August', 'September', 'October', 'November', 'December', 'January', 'February', 'March'] %}
+                    <option value="{{ m }}" {% if selected_month == m %}selected{% endif %}>{{ m }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        
+        <div class="text-right mt-4 md:mt-0">
+            <div class="lab" style="font-size: 14px;">Academic Year</div>
+            <div style="font-size: 32px; font-weight: 700; line-height: 1;">2026-2027</div>
+        </div>
+
+        <div class="tray" aria-hidden="true">
+            <span class="chalk-piece" style="left:14%; width:22px; transform:rotate(-3deg)"></span>
+            <span class="chalk-piece" style="left:calc(14% + 30px); width:14px; background:#F2D675; transform:rotate(4deg)"></span>
+        </div>
+    </form>
+
+    <!-- FLASH MESSAGES -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="reg p-3 mb-6" style="border-left: 4px solid #2ECC71; background: rgba(46, 204, 113, 0.1);">
+            <p class="tx text-sm font-medium">{{ message }}</p>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
+        
+        <!-- ATTENDANCE REGISTER TABLE -->
+        <form method="POST" action="/attendance/save" class="reg xl:col-span-2 overflow-hidden">
+            <input type="hidden" name="class_name" value="{{ selected_class }}">
+            <input type="hidden" name="month_name" value="{{ selected_month }}">
+
+            <div class="reg-head">
+                <div class="flex items-center gap-3">
+                    <svg viewBox="0 0 24 24" width="22" height="22" class="rough tx" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                    </svg>
+                    <h2 class="tx font-bold text-base">Register: {{ selected_class }}</h2>
+                    <span class="soft text-xs ml-2">({{ selected_month }})</span>
+                </div>
+                
+                <div class="flex items-center gap-3">
+                    <label class="soft text-xs">Total Working Days:</label>
+                    <input type="number" id="total_working_days" name="total_working_days" value="{{ (saved_records.values() | first).total_working_days if saved_records else 25 }}" required min="1" max="31" class="att-input" style="width: 40px;">
+                </div>
+            </div>
+
+            <div style="overflow-x:auto">
+                <table id="attendance-table">
+                    <thead>
+                        <tr>
+                            <th class="roll">Roll No</th>
+                            <th>Student Name</th>
+                            <th>Father's Name</th>
+                            <th style="text-align: right;">Present Days</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for student in students %}
+                        {% set record = saved_records.get(student.student_id) %}
+                        <tr class="student-row" data-name="{{ student.name | lower }}">
+                            <td class="roll">#{{ student.roll_no }}</td>
+                            <td style="font-weight:600">{{ student.name }}</td>
+                            <td class="soft">{{ student.father_name }}</td>
+                            <td style="text-align: right;">
+                                <input type="number" name="present_days_{{ student.student_id }}" 
+                                       value="{{ record.present_days if record else '' }}" 
+                                       placeholder="-" min="0" max="31" 
+                                       class="att-input present-input">
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="soft" style="height:88px; text-align:center">
+                                No students found in this class. <a href="/students" style="color:var(--accent); text-decoration:underline">Directory</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if students %}
+            <div class="p-4 border-t" style="border-color: var(--rule); display: flex; justify-content: space-between; align-items: center;">
+                <button type="button" id="fill-all-btn" class="soft text-xs underline hover:text-tx transition-colors" style="background: none; border: none; cursor: pointer;">
+                    Quick fill all as present
+                </button>
+                <button type="submit" class="btn-primary">
+                    Save Record
+                </button>
+            </div>
+            {% endif %}
+        </form>
+
+        <!-- SIDE PANEL -->
+        <div class="space-y-6">
+            
+            <!-- SMART VOICE ASSISTANT -->
+            <div class="reg p-5 text-center">
+                <div class="mb-3">
+                    <svg viewBox="0 0 24 24" width="32" height="32" class="rough tx mx-auto mb-2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <!-- Mic Top Icon -->
+                        <path d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z"></path>
+                        <!-- Mic Stand/Base -->
+                        <path d="M19 10v2a7 7 0 01-14 0v-2"></path>
+                        <line x1="12" y1="19" x2="12" y2="23"></line>
+                        <line x1="8" y1="23" x2="16" y2="23"></line>
+                    </svg>
+                    <h3 class="tx font-bold text-base">Voice Auto-Fill</h3>
+                    <p class="soft text-xs mt-1">Click the mic and say a student's name followed by days. Example: <strong class="tx">"Aryan 22"</strong></p>
+                </div>
+                
+                <!-- CLICKABLE MIC BUTTON (Fully fixed SVG) -->
+                <button type="button" id="mic-btn" class="w-14 h-14 rounded-full flex items-center justify-center mx-auto mt-4 transition-all" style="border: 1px solid var(--line); color: var(--tx); background: transparent; cursor: pointer;">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <!-- Inner Mic Shape -->
+                        <path d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z"></path>
+                        <!-- Inner Mic Stand -->
+                        <path d="M19 10v2a7 7 0 01-14 0v-2"></path>
+                        <line x1="12" y1="19" x2="12" y2="23"></line>
+                        <line x1="8" y1="23" x2="16" y2="23"></line>
+                    </svg>
+                </button>
+                <p id="mic-status" class="text-xs mt-3 soft" style="min-height: 16px;"></p>
+            </div>
+
+            <!-- NOTICE SLIP -->
+            <div class="slip hand">
+                <div style="font-size:20px; font-weight:700">Tips</div>
+                <ul style="font-size:15px; line-height:1.5; margin-top:8px; padding-left: 16px; list-style-type: square;">
+                    <li>Keep total working days accurate; it calculates the final percentage.</li>
+                    <li>You can press 'Tab' to quickly jump to the next student's input box.</li>
+                </ul>
+            </div>
+            
+        </div>
+    </div>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+    /* ---------- Theme Sync ---------- */
+    function lum(c) { const m = c.match(/[\d.]+/g); if (!m) return null; if (m.length > 3 && parseFloat(m[3]) === 0) return null; return (0.299*m[0] + 0.587*m[1] + 0.114*m[2]) / 255; }
+    function syncTheme() {
+        let L = null;
+        [document.body, document.documentElement, document.querySelector('main')].forEach(el => {
+            if (L === null && el) L = lum(getComputedStyle(el).backgroundColor);
+        });
+        if (L === null) { const t = lum(getComputedStyle(document.body).color); L = t === null ? 0 : 1 - t; }
+        const mode = L > 0.5 ? 'light' : 'dark';
+        if (document.documentElement.getAttribute('data-dash-mode') !== mode) {
+            document.documentElement.setAttribute('data-dash-mode', mode);
+        }
+    }
+    syncTheme();
+    const watch = { attributes: true, attributeFilter: ['class', 'style', 'data-theme'] };
+    new MutationObserver(syncTheme).observe(document.documentElement, watch);
+    new MutationObserver(syncTheme).observe(document.body, watch);
+    setInterval(syncTheme, 800);
+
+    /* ---------- Toast Notification ---------- */
+    const toast = document.getElementById('toast');
+    let timer;
+    function showToast(msg) {
+        toast.textContent = msg; toast.classList.add('show');
+        clearTimeout(timer); timer = setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    /* ---------- Quick Fill All Feature ---------- */
+    const fillAllBtn = document.getElementById('fill-all-btn');
+    if(fillAllBtn) {
+        fillAllBtn.addEventListener('click', () => {
+            const maxDays = document.getElementById('total_working_days').value;
+            if(!maxDays || maxDays <= 0) {
+                showToast("Please enter Total Working Days first.");
+                return;
+            }
+            document.querySelectorAll('.present-input').forEach(input => {
+                input.value = maxDays;
+            });
+            showToast("All inputs filled with " + maxDays + " days.");
+        });
+    }
+
+    /* ---------- Smart Voice Auto-Fill Feature ---------- */
+    const micBtn = document.getElementById('mic-btn');
+    const micStatus = document.getElementById('mic-status');
+    
+    if (window.SpeechRecognition || window.webkitSpeechRecognition) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.lang = 'en-IN';
+        
+        recognition.onstart = function() {
+            micBtn.classList.add('mic-active');
+            micStatus.textContent = "Listening... Speak now";
+            micStatus.style.color = "var(--accent)";
+        };
+        
+        recognition.onresult = function(event) {
+            const transcript = event.results[0][0].transcript.toLowerCase().trim();
+            micStatus.textContent = "Heard: " + transcript;
+            micStatus.style.color = "var(--tx)";
+            
+            // 1. EXTRACT NUMBER
+            let daysMatch = transcript.match(/\d+/);
+            let days = "";
+            let spokenName = transcript;
+
+            if (daysMatch) {
+                days = daysMatch[0];
+                spokenName = transcript.replace(days, '').trim();
+            } 
+
+            if(days !== "") {
+                let found = false;
+                
+                // 2. CLEAN SPOKEN WORDS
+                const ignoreWords = ['present', 'absent', 'days', 'din', 'attendance', 'ka', 'ki', 'is', 'ko'];
+                const spokenWords = spokenName.split(/\s+/).filter(w => w.length > 2 && !ignoreWords.includes(w));
+                
+                // 3. SMART NAME MATCHING
+                document.querySelectorAll('.student-row').forEach(row => {
+                    if(found) return; 
+                    
+                    const rowName = (row.dataset.name || "").toLowerCase();
+                    const rowNameWords = rowName.split(/\s+/);
+                    
+                    const isMatch = spokenWords.some(word => rowNameWords.includes(word));
+                    
+                    if(isMatch || rowName === spokenName) {
+                        const input = row.querySelector('.present-input');
+                        if(input) {
+                            input.value = days;
+                            row.style.backgroundColor = "rgba(46, 204, 113, 0.2)";
+                            setTimeout(() => row.style.backgroundColor = "", 1500);
+                            found = true;
+                        }
+                    }
+                });
+                
+                if(found) {
+                    showToast("Updated successfully via voice!");
+                } else {
+                    showToast(`Student not found. Heard name: "${spokenWords.join(' ')}"`);
+                }
+            } else {
+                showToast("No number detected. Say the Name and Number (e.g., 'Aryan 22').");
+            }
+        };
+        
+        recognition.onerror = function(event) {
+            micStatus.textContent = "Error: " + event.error;
+            micStatus.style.color = "var(--margin)";
+            micBtn.classList.remove('mic-active');
+        };
+        
+        recognition.onend = function() {
+            micBtn.classList.remove('mic-active');
+            setTimeout(() => { if(micStatus.textContent.includes("Listening")) micStatus.textContent = ""; }, 1000);
+        };
+        
+        micBtn.addEventListener('click', () => {
+            try { recognition.start(); } catch(e) {}
+        });
+    } else {
+        micBtn.parentElement.style.display = 'none';
+    }
+
+})();
+</script>
+{% endblock %}
