@@ -6,46 +6,71 @@
 ![Database](https://img.shields.io/badge/Database-PostgreSQL%20(Supabase)-336791)
 ![AI](https://img.shields.io/badge/AI-Google%20Gemini-orange)
 
-A modern, full-stack, AI-powered School Management System designed specifically for Uttar Pradesh Government Schools. It features a unique custom UI theme, providing administrators with a secure, centralized dashboard to manage student records, attendance, exam results, government material distribution, and visual analytics.
+A modern, full-stack, AI-powered School Management System designed specifically for Uttar Pradesh Government Schools. It features a custom user interface, providing administrators with a secure, centralized dashboard to manage student records, attendance, exam results, government material distribution, and visual analytics.
 
 ### Live Demo
-**Access the live portal here:** [https://govt-school-portal.onrender.com/](https://govt-school-portal.onrender.com/)
+Access the live portal here: [https://govt-school-portal.onrender.com/](https://govt-school-portal.onrender.com/)
 
 ---
 
-## 1. Technical Architecture
+## 1. System Architecture & UI Design
 
-The application follows a monolithic client-server architecture with a decoupled AI service layer, engineered to digitize administrative and academic operations.
+The application follows a monolithic client-server architecture with a decoupled AI service layer.
 
-*   **Presentation Layer (Frontend):** Developed using HTML5, Tailwind CSS, and Alpine.js. The interface employs a custom "Blackboard & Register" theme, utilizing CSS radial gradients and SVG displacement filters to simulate physical classroom elements without relying on heavy background images. State management for toggles, voice-recognition states, and bulk-selection (e.g., the Student Promotion module) is handled client-side via Alpine.js.
-*   **Application Layer (Backend):** Powered by Python and Flask. The backend handles HTTP routing, server-side business logic (e.g., dynamic grade calculations, percentage formatting), session management, and cryptographic functions using Werkzeug Security.
-*   **Data Layer (Database):** Hosted on Supabase (PostgreSQL). It acts as the single source of truth, heavily relying on relational constraints (Foreign Keys) to link all modules back to a central student directory.
-
----
-
-## 2. Core Functional Modules
-
-*   **Master Student Directory:** A central repository handling student admissions, demographics, and unique roll number assignments.
-*   **Academic Performance Engine:** Records subject-wise marks against dynamic `max_marks` parameters. The Python backend automatically computes total scores, calculates percentages, and assigns academic grades before committing the record to the database.
-*   **Monthly Attendance & Analytics:** Tracks total working days versus present days per student per month. This data is aggregated by SQL and visualized on the administrative dashboard using Chart.js.
-*   **Material Distribution Tracker:** A specialized administrative module to monitor the disbursement of government-provided schemes (uniforms, textbooks, shoes, and bags) using boolean tracking.
-*   **Bulk Student Promotion:** Allows administrators to filter students by their current class, select multiple records simultaneously, and execute a bulk database update to promote them to the next academic tier.
+*   **Frontend (UI/UX):** Developed using HTML5, Tailwind CSS, and Alpine.js. The interface employs a custom "Blackboard & Register" theme. It utilizes CSS radial gradients and SVG displacement filters to simulate physical classroom elements (chalk dust, register lines) without heavy background images. State management for UI toggles, voice-recognition states, and bulk-selection is handled client-side via Alpine.js.
+*   **Backend (Server Logic):** Powered by Python and Flask. The backend application (`app.py`) handles HTTP routing, server-side business logic (e.g., dynamic grade calculations, percentage formatting), session management, and cryptographic functions.
+*   **Database (Data Layer):** Hosted on Supabase (PostgreSQL). It acts as the single source of truth, heavily relying on relational constraints (Foreign Keys) to link all modules back to a central student directory.
 
 ---
 
-## 3. Database Schema & Architecture
+## 2. Core Features & Modules
 
-The system utilizes a secure PostgreSQL relational database with 5 core tables. Data integrity is maintained using Foreign Keys linking back to the master `students` table.
+*   **Master Student Directory:** Complete CRUD operations for student admission, demographics, and unique roll number assignments.
+*   **Academic Performance Engine:** Records subject-wise marks against dynamic maximum marks parameters. The backend automatically computes total scores, calculates percentages, and assigns academic grades.
+*   **Monthly Attendance Tracker:** Tracks total working days versus present days per student per month.
+*   **Material Distribution Tracker:** Monitors the disbursement of government-provided schemes (uniforms, textbooks, shoes, and bags) using boolean flags.
+*   **Visual Analytics Dashboard:** Data is aggregated via SQL and visualized using Chart.js, rendering metrics like overall attendance health, class strength, and gender distribution.
+*   **Bulk Student Promotion:** Allows administrators to filter students by their current class, select multiple records simultaneously, and execute a bulk database update to promote them to the next academic session.
 
-### Table 1: schools (Admin Authentication)
-Handles administrative credentials and portal access.
-```sql
-CREATE TABLE schools (
-    school_id SERIAL PRIMARY KEY,
-    school_code VARCHAR UNIQUE NOT NULL,
-    school_name VARCHAR,
-    email VARCHAR UNIQUE,
-    password VARCHAR NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    is_admin BOOLEAN DEFAULT FALSE
-);
+---
+
+## 3. Technology Stack
+
+*   **Frontend:** HTML5, CSS3, Tailwind CSS, Alpine.js, Chart.js
+*   **Backend:** Python, Flask, Werkzeug Security, Psycopg2 (Database Adapter)
+*   **Database:** PostgreSQL (Hosted on Supabase)
+*   **AI Integration:** Google Gemini API (LLM), Browser Web Speech API (Speech-to-Text)
+
+---
+
+## 4. Database Structure
+
+The system utilizes a secure PostgreSQL relational database. Data integrity is maintained using Foreign Keys linking back to the master student table. The database consists of the following 6 core tables:
+
+1.  **schools:** Handles administrative credentials, school codes, and portal access authorization logic.
+2.  **students:** The core master directory. Stores basic demographics, roll numbers, and class details. All other records reference the `student_id` from this table.
+3.  **exam_results:** Stores academic metrics dynamically calculated by the backend (subject marks, total marks, percentage, and grade).
+4.  **monthly_attendance:** Tracks aggregate monthly attendance (working days vs. present days) used for generating visualization charts.
+5.  **material_distribution:** Tracks the distribution status of state-sponsored materials (uniforms, books, bags, shoes) using boolean tracking.
+6.  **teachers:** Designed for future expansion to manage faculty records and class assignments.
+
+---
+
+## 5. The AI & Voice Search Subsystem
+
+The portal features a "Smart AI Query" module, allowing administrators to query the PostgreSQL database using spoken regional languages without writing SQL.
+
+*   **Speech-to-Text Pipeline:** Utilizes the browser-native Web Speech API configured with the `hi-IN` language model. This enables real-time transcription of regional queries (Hindi/English/Hinglish) directly into text strings without requiring external audio processing servers.
+*   **Context-Aware Prompt Engineering:** The transcribed text is sent to the Flask backend, where it is packaged into a strict system prompt. This prompt injects the exact database schema and the active `school_id` to provide the AI with total context.
+*   **Text-to-SQL Generation:** The Google Gemini API processes the prompt and translates the natural language request into a raw PostgreSQL query, which is then executed and rendered as an HTML table dynamically.
+
+---
+
+## 6. Multi-Tenant Security & Data Isolation
+
+Security is enforced at the application layer to ensure absolute data isolation across different registered schools:
+
+*   **Session-Based Tenant Isolation:** Upon successful administrative authentication, the `school_id` is stored in a secure, encrypted server-side session. Every subsequent backend SQL query automatically injects this `school_id` as a strict `WHERE` clause filter, ensuring one school can never query or view another school's data.
+*   **Strict Type Casting:** To prevent PostgreSQL type-mismatch errors between application strings and database integers, tenant filtering utilizes explicit SQL casting (`CAST(school_id AS VARCHAR)`).
+*   **Cryptographic Hashing:** Passwords are never stored or transmitted in plaintext. The system utilizes `pbkdf2:sha256` hashing (via Werkzeug) to secure administrative credentials.
+*   **AI Prompt Injection Prevention:** The system prompt explicitly restricts the AI to generate `SELECT` statements only. `INSERT`, `UPDATE`, `DELETE`, or `DROP` commands are structurally blocked by the backend execution engine to prevent accidental or malicious data corruption.
