@@ -4,17 +4,22 @@ import io
 import psycopg2
 import psycopg2.extras
 from functools import wraps
-from flask import Flask, render_template, request, redirect, url_for, session, flash, Response, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, flash, Response, jsonify, send_from_directory, make_response
 from dotenv import load_dotenv
 from google import genai
-import csv
 from io import StringIO
-from flask import Response, make_response
 
+# 1. SABSE PEHLE .env file load karni hai
+load_dotenv()
 
-from flask import send_from_directory
+# 2. USKE BAAD Gemini AI setup karna hai (taaki os.getenv ko key mil sake)
+ai_client = genai.Client(api_key=os.getenv('GEMINI_API_KEY'))
 
-# --- PWA Routes ---
+# 3. Flask App Setup (Pehle app banega)
+app = Flask(__name__)
+app.secret_key = os.getenv('FLASK_SECRET_KEY')
+
+# --- PWA Routes (App banne ke baad yahan aayenge) ---
 @app.route('/manifest.json')
 def serve_manifest():
     return send_from_directory('static', 'manifest.json')
@@ -25,16 +30,7 @@ def serve_sw():
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     return response
 
-
-# 1. SABSE PEHLE .env file load karni hai
-load_dotenv()
-
-# 2. USKE BAAD Gemini AI setup karna hai (taaki os.getenv ko key mil sake)
-ai_client = genai.Client(api_key=os.getenv('GEMINI_API_KEY'))
-
-# 3. Flask App Setup
-app = Flask(__name__)
-app.secret_key = os.getenv('FLASK_SECRET_KEY')
+# 4. Database Connection
 def get_db_connection():
     db_url = os.environ.get("DATABASE_URL")
     return psycopg2.connect(db_url)
@@ -59,6 +55,7 @@ def inject_school():
         })
     return dict(current_school=None)
 
+# ...... Iske baad aapke baaki saare purane routes aayenge ......
 # ================= 1. LOGIN SYSTEM =================
 @app.route('/login', methods=['GET', 'POST'])
 def login():
