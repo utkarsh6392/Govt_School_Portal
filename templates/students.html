@@ -205,7 +205,7 @@
     <!-- ADD ADMISSION MODAL -->
     <div x-cloak x-show="modalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="modalOpen = false"></div>
-        <div class="reg relative z-10 w-full max-w-2xl p-6 md:p-8" style="border-top: 4px solid var(--accent); box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+        <div class="reg relative z-10 w-full max-w-2xl p-6 md:p-8 max-h-[90vh] overflow-y-auto" style="border-top: 4px solid var(--accent); box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
             <div class="flex justify-between items-center mb-6 pb-4" style="border-bottom: 1px solid var(--rule);">
                 <h2 class="tx text-xl font-bold">New Admission Form</h2>
                 <button @click="modalOpen = false" class="soft hover:text-tx transition-colors" style="background:none; border:none; cursor:pointer;">
@@ -243,7 +243,7 @@
     <!-- EDIT STUDENT MODAL (NEW) -->
     <div x-cloak x-show="editModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="editModalOpen = false"></div>
-        <div class="reg relative z-10 w-full max-w-2xl p-6 md:p-8" style="border-top: 4px solid var(--accent); box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+        <div class="reg relative z-10 w-full max-w-2xl p-6 md:p-8 max-h-[90vh] overflow-y-auto" style="border-top: 4px solid var(--accent); box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
             <div class="flex justify-between items-center mb-6 pb-4" style="border-bottom: 1px solid var(--rule);">
                 <h2 class="tx text-xl font-bold">Edit Student Record</h2>
                 <button @click="editModalOpen = false" class="soft hover:text-tx transition-colors" style="background:none; border:none; cursor:pointer;">
