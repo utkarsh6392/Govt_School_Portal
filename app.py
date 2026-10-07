@@ -904,11 +904,12 @@ def api_ai_search():
             error_msg = str(e).lower()
             if "503" in error_msg and attempt < max_retries - 1:
                 # Agar 503 error hai, toh wait karke dobara try karein
-                time.sleep(2 * (attempt + 1))
+                time.sleep(2 * (attempt + 1)) # Wait 2s, then 4s
                 continue
             else:
-                # TEMPORARY CHANGE: Asli error ko screen par print karne ke liye
-                return jsonify({"error": f"Asli Error: {str(e)}"}), 500
+                # Agar 3 baar me bhi na chale ya koi aur error ho
+                return jsonify({"error": "AI Server abhi bohot busy hai (High Demand). Kripya 10 seconds baad dobara try karein."}), 500
+
     # Remove markdown if the AI accidentally adds it
     if sql_query.startswith("```sql"):
         sql_query = sql_query[6:-3].strip()
