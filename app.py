@@ -860,22 +860,26 @@ def api_ai_search():
         return jsonify({"error": "Please enter a question."}), 400
 
     # System Prompt for Text-to-SQL (With New Rules Added)
+    # System Prompt for Text-to-SQL (With New Rules Added)
+    # System Prompt for Text-to-SQL (With New Rules Added)
     prompt = f"""
     You are an expert SQL developer for a school PostgreSQL database.
     Here is the exact schema:
-    1. students (student_id, name, roll_no, class_name, gender, school_id)
+    1. students (student_id, name, roll_no, class_name, gender, father_name, mother_name, dob, address, school_id)
     2. monthly_attendance (student_id, present_days, total_working_days, school_id)
     3. exam_results (student_id, percentage, grade, school_id)
+    4. material_distribution (id, school_id, student_id, academic_year, uniform_given, books_given, shoes_given, bag_given)
 
     User Request: "{user_query}"
     
     CRITICAL RULES FOR SQL GENERATION:
     1. For class names, ALWAYS use the exact format: 'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5'. If the user says "class 1" or "first class", convert it to 'Class 1'.
-    2. Use ILIKE instead of '=' for all text searches to ignore case sensitivity (e.g., name ILIKE '%Aryan%').
+    2. Use ILIKE instead of '=' for all text searches to ignore case sensitivity (e.g., name ILIKE '%Anant%').
     3. ALWAYS filter every query with: CAST(school_id AS VARCHAR) = '{school_id}'
     4. Use JOINs on student_id if the data spans multiple tables.
-    5. Only use SELECT statements. Never use INSERT, UPDATE, DROP, or DELETE.
-    6. RETURN ONLY THE RAW SQL QUERY. Do not include markdown formatting like ```sql or any explanations.
+    5. For questions about bags, books, shoes, or uniforms, JOIN the 'students' table with the 'material_distribution' table and check the boolean columns (e.g., bag_given = TRUE).
+    6. Only use SELECT statements. Never use INSERT, UPDATE, DROP, or DELETE.
+    7. RETURN ONLY THE RAW SQL QUERY. Do not include markdown formatting like ```sql or any explanations.
     """
 
     sql_query = ""
