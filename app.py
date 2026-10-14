@@ -895,7 +895,7 @@ def api_ai_search():
         try:
             # NAYA SYNTAX (google.genai ke hisaab se)
             response = ai_client.models.generate_content(
-                model='gemini-1.5-flash', 
+                model='gemini-2.5-flash', 
                 contents=prompt
             )
             sql_query = response.text.strip()
