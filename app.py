@@ -880,6 +880,7 @@ def api_ai_search():
     5. For questions about bags, books, shoes, or uniforms, JOIN the 'students' table with the 'material_distribution' table and check the boolean columns (e.g., bag_given = TRUE).
     6. Only use SELECT statements. Never use INSERT, UPDATE, DROP, or DELETE.
     7. RETURN ONLY THE RAW SQL QUERY. Do not include markdown formatting like ```sql or any explanations.
+    8. ALWAYS add 'LIMIT 50' at the end of every SELECT query to prevent memory overflow.
     """
 
     sql_query = ""
@@ -894,7 +895,7 @@ def api_ai_search():
         try:
             # NAYA SYNTAX (google.genai ke hisaab se)
             response = ai_client.models.generate_content(
-                model='gemini-3.6-flash', 
+                model='gemini-1.5-flash', 
                 contents=prompt
             )
             sql_query = response.text.strip()
